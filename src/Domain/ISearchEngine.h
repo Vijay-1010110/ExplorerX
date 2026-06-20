@@ -19,6 +19,8 @@ public:
     virtual ~ISearchEngine() = default;
 
     virtual std::future<Expected<void>> IndexDirectory(const Path& path) = 0;
+    virtual std::future<Expected<void>> IndexFile(const Path& path) = 0;
+    virtual std::future<Expected<void>> RemoveEntry(const Path& path) = 0;
     virtual std::future<Expected<SearchResults>> Query(const SearchQuery& query) = 0;
 };
 
