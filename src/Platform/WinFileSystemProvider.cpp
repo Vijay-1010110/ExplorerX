@@ -105,6 +105,47 @@ std::future<Domain::Expected<Domain::ListingResult>> WinFileSystemProvider::Enum
     });
 }
 
+std::future<Domain::Expected<Domain::FileItem>> WinFileSystemProvider::GetMetadata(const Domain::Path& path) {
+    return std::async(std::launch::async, [pathString = path.ToString(), pathObj = path]() -> Domain::Expected<Domain::FileItem> {
+        std::wstring wPath = Utf8ToWide(pathString);
+        if (wPath.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
+        }
+
+        WIN32_FILE_ATTRIBUTE_DATA attrData;
+        if (!GetFileAttributesExW(wPath.c_str(), GetFileExInfoStandard, &attrData)) {
+            DWORD err = GetLastError();
+            return Domain::MakeUnexpected(Domain::Error{MapWin32Error(err), "GetFileAttributesExW failed", (int)err});
+        }
+
+        Domain::FileItem item;
+        item.ItemPath = pathObj;
+        
+        size_t lastSlash = pathString.find_last_of("\\/");
+        if (lastSlash != std::string::npos && lastSlash + 1 < pathString.length()) {
+            item.Name = pathString.substr(lastSlash + 1);
+        } else {
+            item.Name = pathString;
+        }
+
+        ULARGE_INTEGER sz;
+        sz.LowPart = attrData.nFileSizeLow;
+        sz.HighPart = attrData.nFileSizeHigh;
+        item.Size = sz.QuadPart;
+
+        item.IsDirectory = (attrData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        item.IsHidden = (attrData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
+        item.IsSystem = (attrData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0;
+
+        item.DateCreated = FileTimeToTimePoint(attrData.ftCreationTime);
+        item.DateModified = FileTimeToTimePoint(attrData.ftLastWriteTime);
+        item.DateAccessed = FileTimeToTimePoint(attrData.ftLastAccessTime);
+
+        return item;
+    });
+}
+
+
 Domain::Expected<void> WinFileSystemProvider::Copy(const Domain::CopyRequest& req) {
     return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Not implemented yet", 0});
 }

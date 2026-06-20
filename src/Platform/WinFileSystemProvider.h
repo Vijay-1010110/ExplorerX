@@ -11,6 +11,7 @@ public:
     ~WinFileSystemProvider() override = default;
 
     std::future<Domain::Expected<Domain::ListingResult>> Enumerate(const Domain::Path& path) override;
+    std::future<Domain::Expected<Domain::FileItem>> GetMetadata(const Domain::Path& path) override;
     Domain::Expected<void> Copy(const Domain::CopyRequest& req) override;
     Domain::Expected<void> Move(const Domain::MoveRequest& req) override;
     Domain::Expected<void> Delete(const Domain::DeleteRequest& req) override;
