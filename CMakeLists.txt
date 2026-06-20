@@ -11,6 +11,7 @@ set(CMAKE_AUTOUIC ON)
 find_package(tl-expected CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+set(CMAKE_PREFIX_PATH "D:/Antigravity projects/ExplorerX/external/Qt/6.6.1/msvc2019_64" ${CMAKE_PREFIX_PATH})
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 add_subdirectory(src)

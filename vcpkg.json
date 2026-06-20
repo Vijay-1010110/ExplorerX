@@ -4,7 +4,6 @@
   "dependencies": [
     "spdlog",
     "tl-expected",
-    "nlohmann-json",
-    "qtbase"
+    "nlohmann-json"
   ]
 }
