@@ -1,7 +1,6 @@
 #include "MainWindow.h"
 #include <QToolBar>
-#include <QDockWidget>
-#include <QWidget>
+#include <QSplitter>
 #include <QTableView>
 #include <QTreeView>
 
@@ -20,14 +19,19 @@ void MainWindow::setupUi() {
     QToolBar *addressBar = addToolBar(QStringLiteral("Address Bar"));
     addressBar->setMovable(false);
 
-    // Left dock widget (navigation tree)
-    QDockWidget *navDock = new QDockWidget(QStringLiteral("Navigation"), this);
-    navDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    QTreeView *navTree = new QTreeView(navDock);
-    navDock->setWidget(navTree);
-    addDockWidget(Qt::LeftDockWidgetArea, navDock);
+    // Main splitter for navigation and file grid
+    QSplitter *mainSplitter = new QSplitter(Qt::Horizontal, this);
 
-    // Central widget (file grid)
-    QTableView *fileGrid = new QTableView(this);
-    setCentralWidget(fileGrid);
+    // Left pane (navigation tree)
+    QTreeView *navTree = new QTreeView(mainSplitter);
+    mainSplitter->addWidget(navTree);
+
+    // Right pane (file grid)
+    QTableView *fileGrid = new QTableView(mainSplitter);
+    mainSplitter->addWidget(fileGrid);
+
+    // Initial sizes for splitter (e.g., 25% vs 75%)
+    mainSplitter->setSizes({250, 750});
+
+    setCentralWidget(mainSplitter);
 }
