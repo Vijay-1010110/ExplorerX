@@ -4,6 +4,7 @@
   "dependencies": [
     "spdlog",
     "tl-expected",
-    "nlohmann-json"
+    "nlohmann-json",
+    "sqlite3"
   ]
 }

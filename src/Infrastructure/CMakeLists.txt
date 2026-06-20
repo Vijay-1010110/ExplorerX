@@ -11,4 +11,5 @@ target_link_libraries(Infrastructure
     PRIVATE
         spdlog::spdlog
         nlohmann_json::nlohmann_json
+        unofficial::sqlite3::sqlite3
 )
