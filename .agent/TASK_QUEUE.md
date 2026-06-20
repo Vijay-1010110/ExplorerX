@@ -2,9 +2,9 @@
 
 This queue is derived from the Roadmap phases and represents actionable items.
 
-- [ ] **Phase 0:** Draft feature specification & non-functional requirements.
-- [ ] **Phase 0:** Decide on supported Windows versions, file system matrix.
-- [ ] **Phase 0:** Draft Plugin, AI, Privacy, and Update policies.
+- [x] **Phase 0:** Draft feature specification & non-functional requirements.
+- [x] **Phase 0:** Decide on supported Windows versions, file system matrix.
+- [x] **Phase 0:** Draft Plugin, AI, Privacy, and Update policies.
 - [x] **Phase 1.1:** Implement Path and Item model (`Path`, `FileId`, `FileItem`, etc.).
 - [x] **Phase 1.2:** Define Error model (`access denied`, `path not found`, etc.).
 - [x] **Phase 1.3:** Implement Result model (`Expected<T>`).
