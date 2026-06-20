@@ -15,7 +15,7 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 2.3:** Build file operations (copy, move, delete) with progress events.
 - [x] **Phase 2.4:** Implement path normalization (UNC, reparse points).
 - [x] **Phase 2.5:** Setup file system watcher.
-- [ ] **Phase 3.1:** Setup Qt 6 main window layout.
+- [x] **Phase 3.1:** Setup Qt 6 main window layout.
 - [ ] **Phase 3.2:** Implement Core Views (tree view, file grid).
 - [ ] **Phase 3.3:** Implement UI Virtualization for file lists.
 - [ ] **Phase 3.4:** Add interaction models (drag/drop, shortcuts).
