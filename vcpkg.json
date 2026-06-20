@@ -1,0 +1,9 @@
+{
+  "name": "explorerx",
+  "version": "0.1.0",
+  "dependencies": [
+    "spdlog",
+    "tl-expected",
+    "nlohmann-json"
+  ]
+}

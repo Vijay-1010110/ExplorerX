@@ -13,6 +13,8 @@ enum class ErrorCode {
     InvalidFilename,
     OperationCancelled,
     UnsupportedReparsePoint,
+    NotFound,
+    InvalidFormat,
     Unknown
 };
 

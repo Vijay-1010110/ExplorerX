@@ -8,8 +8,8 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 1.1:** Implement Path and Item model (`Path`, `FileId`, `FileItem`, etc.).
 - [x] **Phase 1.2:** Define Error model (`access denied`, `path not found`, etc.).
 - [x] **Phase 1.3:** Implement Result model (`Expected<T>`).
-- [ ] **Phase 1.4:** Setup logging framework (`spdlog`) and diagnostics.
-- [ ] **Phase 1.5:** Build config system (JSON-based settings, cache policies).
+- [x] **Phase 1.4:** Setup logging framework (`spdlog`) and diagnostics.
+- [x] **Phase 1.5:** Build config system (JSON-based settings, cache policies).
 - [ ] **Phase 2.1:** Implement asynchronous directory enumeration.
 - [ ] **Phase 2.2:** Implement metadata extraction (timestamps, attributes).
 - [ ] **Phase 2.3:** Build file operations (copy, move, delete) with progress events.

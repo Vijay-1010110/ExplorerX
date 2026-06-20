@@ -1,6 +1,8 @@
 add_library(Infrastructure
     SpdLogProvider.cpp
     SpdLogProvider.h
+    JsonConfigProvider.cpp
+    JsonConfigProvider.h
 )
 
 target_link_libraries(Infrastructure
@@ -8,4 +10,5 @@ target_link_libraries(Infrastructure
         Domain
     PRIVATE
         spdlog::spdlog
+        nlohmann_json::nlohmann_json
 )
