@@ -1,25 +1,10 @@
 #include "WinFileSystemProvider.h"
+#include "WinPathHelper.h"
 #include <windows.h>
 #include <string>
 #include <vector>
 
 namespace ExplorerX::Platform {
-
-static std::wstring Utf8ToWide(const std::string& utf8) {
-    if (utf8.empty()) return {};
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), (int)utf8.size(), nullptr, 0);
-    std::wstring result(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), (int)utf8.size(), result.data(), size_needed);
-    return result;
-}
-
-static std::string WideToUtf8(const std::wstring& wide) {
-    if (wide.empty()) return {};
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wide.data(), (int)wide.size(), nullptr, 0, nullptr, nullptr);
-    std::string result(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wide.data(), (int)wide.size(), result.data(), size_needed, nullptr, nullptr);
-    return result;
-}
 
 static std::chrono::system_clock::time_point FileTimeToTimePoint(const FILETIME& ft) {
     ULARGE_INTEGER ull;
@@ -45,7 +30,7 @@ std::future<Domain::Expected<Domain::ListingResult>> WinFileSystemProvider::Enum
     return std::async(std::launch::async, [pathString = path.ToString()]() -> Domain::Expected<Domain::ListingResult> {
         Domain::ListingResult result;
         
-        std::wstring wPath = Utf8ToWide(pathString);
+        std::wstring wPath = WinPathHelper::NormalizeAndResolvePath(pathString);
         if (wPath.empty()) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
         }
@@ -70,7 +55,7 @@ std::future<Domain::Expected<Domain::ListingResult>> WinFileSystemProvider::Enum
             }
             
             Domain::FileItem item;
-            item.Name = WideToUtf8(fileName);
+            item.Name = WinPathHelper::WideToUtf8(fileName);
             
             std::string dirPath = pathString;
             if (!dirPath.empty() && dirPath.back() != '\\' && dirPath.back() != '/') {
@@ -107,7 +92,7 @@ std::future<Domain::Expected<Domain::ListingResult>> WinFileSystemProvider::Enum
 
 std::future<Domain::Expected<Domain::FileItem>> WinFileSystemProvider::GetMetadata(const Domain::Path& path) {
     return std::async(std::launch::async, [pathString = path.ToString(), pathObj = path]() -> Domain::Expected<Domain::FileItem> {
-        std::wstring wPath = Utf8ToWide(pathString);
+        std::wstring wPath = WinPathHelper::NormalizeAndResolvePath(pathString);
         if (wPath.empty()) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
         }
@@ -176,8 +161,8 @@ static DWORD CALLBACK CopyProgressCallbackWithData(
 
 std::future<Domain::Expected<void>> WinFileSystemProvider::Copy(const Domain::CopyRequest& req, const Domain::ProgressContext& progress) {
     return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
-        std::wstring src = Utf8ToWide(req.Source.ToString());
-        std::wstring dst = Utf8ToWide(req.Destination.ToString());
+        std::wstring src = WinPathHelper::NormalizeAndResolvePath(req.Source.ToString());
+        std::wstring dst = WinPathHelper::NormalizeAndResolvePath(req.Destination.ToString());
         
         if (src.empty() || dst.empty()) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
@@ -202,8 +187,8 @@ std::future<Domain::Expected<void>> WinFileSystemProvider::Copy(const Domain::Co
 
 std::future<Domain::Expected<void>> WinFileSystemProvider::Move(const Domain::MoveRequest& req, const Domain::ProgressContext& progress) {
     return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
-        std::wstring src = Utf8ToWide(req.Source.ToString());
-        std::wstring dst = Utf8ToWide(req.Destination.ToString());
+        std::wstring src = WinPathHelper::NormalizeAndResolvePath(req.Source.ToString());
+        std::wstring dst = WinPathHelper::NormalizeAndResolvePath(req.Destination.ToString());
         
         if (src.empty() || dst.empty()) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
@@ -227,7 +212,7 @@ std::future<Domain::Expected<void>> WinFileSystemProvider::Move(const Domain::Mo
 
 std::future<Domain::Expected<void>> WinFileSystemProvider::Delete(const Domain::DeleteRequest& req, const Domain::ProgressContext& progress) {
     return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
-        std::wstring target = Utf8ToWide(req.Target.ToString());
+        std::wstring target = WinPathHelper::NormalizeAndResolvePath(req.Target.ToString());
         if (target.empty()) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
         }
@@ -251,8 +236,11 @@ std::future<Domain::Expected<void>> WinFileSystemProvider::Delete(const Domain::
                 }
             }
         } else {
-            // Send to recycle bin
+            // Send to recycle bin (SHFileOperation doesn't support \\?\ well)
             std::wstring doubleNullPath = target;
+            if (doubleNullPath.compare(0, 4, L"\\\\?\\") == 0) {
+                doubleNullPath = doubleNullPath.substr(4);
+            }
             doubleNullPath.push_back(L'\0');
 
             SHFILEOPSTRUCTW fileOp = {};
