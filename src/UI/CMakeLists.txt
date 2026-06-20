@@ -6,6 +6,10 @@ add_executable(ExplorerX
     Views/DirectoryTreeView.cpp
     Views/FileGridView.h
     Views/FileGridView.cpp
+    ViewModels/FileItemModel.h
+    ViewModels/FileItemModel.cpp
+    ViewModels/DirectoryItemModel.h
+    ViewModels/DirectoryItemModel.cpp
 )
 
 target_link_libraries(ExplorerX
