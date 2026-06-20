@@ -5,6 +5,7 @@
     "spdlog",
     "tl-expected",
     "nlohmann-json",
-    "sqlite3"
+    "sqlite3",
+    "gtest"
   ]
 }
