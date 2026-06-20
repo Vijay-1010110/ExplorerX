@@ -17,4 +17,5 @@ target_link_libraries(ExplorerX
         Domain
         Core
         Qt6::Widgets
+        spdlog::spdlog
 )

@@ -95,3 +95,10 @@ QVariant DirectoryItemModel::headerData(int section, Qt::Orientation orientation
     }
     return {};
 }
+
+Qt::ItemFlags DirectoryItemModel::flags(const QModelIndex &index) const {
+    if (!index.isValid()) {
+        return Qt::ItemIsDropEnabled;
+    }
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+}

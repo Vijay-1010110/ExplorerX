@@ -8,6 +8,12 @@ FileGridView::FileGridView(QWidget *parent)
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
     
+    // Drag and Drop support
+    setDragEnabled(true);
+    setAcceptDrops(true);
+    setDropIndicatorShown(true);
+    setDragDropMode(QAbstractItemView::DragDrop);
+    
     setupDummyModel();
 }
 
