@@ -10,7 +10,7 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 1.3:** Implement Result model (`Expected<T>`).
 - [x] **Phase 1.4:** Setup logging framework (`spdlog`) and diagnostics.
 - [x] **Phase 1.5:** Build config system (JSON-based settings, cache policies).
-- [ ] **Phase 2.1:** Implement asynchronous directory enumeration.
+- [x] **Phase 2.1:** Implement asynchronous directory enumeration.
 - [ ] **Phase 2.2:** Implement metadata extraction (timestamps, attributes).
 - [ ] **Phase 2.3:** Build file operations (copy, move, delete) with progress events.
 - [ ] **Phase 2.4:** Implement path normalization (UNC, reparse points).

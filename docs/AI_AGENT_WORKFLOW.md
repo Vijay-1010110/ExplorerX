@@ -47,4 +47,5 @@ This document outlines the roles and responsibilities of the specialized AI agen
 7. **Testing:** `@TestAgent` writes and executes tests for the new code.
 8. **Build & Deploy:** `@BuildAgent` updates CMake/vcpkg if new dependencies or targets are added.
 9. **Review:** `@ReviewAgent` signs off on the code.
-10. **Merge:** Commit final changes and merge into the main branch following project Git standards.
+10. **Commit:** Commit changes locally only when a significant unit of work or a phase is fully completed and working. Avoid committing minor, incomplete changes.
+11. **Push:** Do not push to the remote repository until a major milestone or phase is finished and stable.
