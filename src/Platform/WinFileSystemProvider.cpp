@@ -146,16 +146,134 @@ std::future<Domain::Expected<Domain::FileItem>> WinFileSystemProvider::GetMetada
 }
 
 
-Domain::Expected<void> WinFileSystemProvider::Copy(const Domain::CopyRequest& req) {
-    return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Not implemented yet", 0});
+struct CopyContextData {
+    const Domain::ProgressContext* ctx;
+    std::string fileName;
+};
+
+static DWORD CALLBACK CopyProgressCallbackWithData(
+    LARGE_INTEGER TotalFileSize,
+    LARGE_INTEGER TotalBytesTransferred,
+    LARGE_INTEGER StreamSize,
+    LARGE_INTEGER StreamBytesTransferred,
+    DWORD dwStreamNumber,
+    DWORD dwCallbackReason,
+    HANDLE hSourceFile,
+    HANDLE hDestinationFile,
+    LPVOID lpData
+) {
+    auto* data = static_cast<CopyContextData*>(lpData);
+    if (data && data->ctx) {
+        if (data->ctx->IsCancelled && data->ctx->IsCancelled->load()) {
+            return PROGRESS_CANCEL;
+        }
+        if (data->ctx->OnProgress) {
+            data->ctx->OnProgress(TotalBytesTransferred.QuadPart, TotalFileSize.QuadPart, data->fileName);
+        }
+    }
+    return PROGRESS_CONTINUE;
 }
 
-Domain::Expected<void> WinFileSystemProvider::Move(const Domain::MoveRequest& req) {
-    return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Not implemented yet", 0});
+std::future<Domain::Expected<void>> WinFileSystemProvider::Copy(const Domain::CopyRequest& req, const Domain::ProgressContext& progress) {
+    return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
+        std::wstring src = Utf8ToWide(req.Source.ToString());
+        std::wstring dst = Utf8ToWide(req.Destination.ToString());
+        
+        if (src.empty() || dst.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
+        }
+
+        BOOL cancelFlag = FALSE;
+        CopyContextData data = { &progress, req.Source.ToString() };
+        
+        DWORD copyFlags = req.Overwrite ? 0 : COPY_FILE_FAIL_IF_EXISTS;
+
+        if (!CopyFileExW(src.c_str(), dst.c_str(), CopyProgressCallbackWithData, &data, &cancelFlag, copyFlags)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_REQUEST_ABORTED) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::OperationCancelled, "Copy cancelled", (int)err});
+            }
+            return Domain::MakeUnexpected(Domain::Error{MapWin32Error(err), "CopyFileExW failed", (int)err});
+        }
+        
+        return {};
+    });
 }
 
-Domain::Expected<void> WinFileSystemProvider::Delete(const Domain::DeleteRequest& req) {
-    return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Not implemented yet", 0});
+std::future<Domain::Expected<void>> WinFileSystemProvider::Move(const Domain::MoveRequest& req, const Domain::ProgressContext& progress) {
+    return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
+        std::wstring src = Utf8ToWide(req.Source.ToString());
+        std::wstring dst = Utf8ToWide(req.Destination.ToString());
+        
+        if (src.empty() || dst.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
+        }
+
+        CopyContextData data = { &progress, req.Source.ToString() };
+        
+        if (!MoveFileWithProgressW(src.c_str(), dst.c_str(), CopyProgressCallbackWithData, &data, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_REQUEST_ABORTED) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::OperationCancelled, "Move cancelled", (int)err});
+            }
+            return Domain::MakeUnexpected(Domain::Error{MapWin32Error(err), "MoveFileWithProgressW failed", (int)err});
+        }
+        
+        return {};
+    });
+}
+
+#include <shellapi.h>
+
+std::future<Domain::Expected<void>> WinFileSystemProvider::Delete(const Domain::DeleteRequest& req, const Domain::ProgressContext& progress) {
+    return std::async(std::launch::async, [req, progress]() -> Domain::Expected<void> {
+        std::wstring target = Utf8ToWide(req.Target.ToString());
+        if (target.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path", 0});
+        }
+
+        if (progress.IsCancelled && progress.IsCancelled->load()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::OperationCancelled, "Delete cancelled", 0});
+        }
+
+        if (req.Permanent) {
+            DWORD attr = GetFileAttributesW(target.c_str());
+            if (attr == INVALID_FILE_ATTRIBUTES) {
+                return Domain::MakeUnexpected(Domain::Error{MapWin32Error(GetLastError()), "File not found", (int)GetLastError()});
+            }
+            if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+                if (!RemoveDirectoryW(target.c_str())) {
+                    return Domain::MakeUnexpected(Domain::Error{MapWin32Error(GetLastError()), "RemoveDirectoryW failed", (int)GetLastError()});
+                }
+            } else {
+                if (!DeleteFileW(target.c_str())) {
+                    return Domain::MakeUnexpected(Domain::Error{MapWin32Error(GetLastError()), "DeleteFileW failed", (int)GetLastError()});
+                }
+            }
+        } else {
+            // Send to recycle bin
+            std::wstring doubleNullPath = target;
+            doubleNullPath.push_back(L'\0');
+
+            SHFILEOPSTRUCTW fileOp = {};
+            fileOp.hwnd = NULL;
+            fileOp.wFunc = FO_DELETE;
+            fileOp.pFrom = doubleNullPath.c_str();
+            fileOp.pTo = NULL;
+            fileOp.fFlags = FOF_ALLOWUNDO | FOF_NO_UI | FOF_SILENT | FOF_NOCONFIRMATION;
+
+            int result = SHFileOperationW(&fileOp);
+            if (result != 0 || fileOp.fAnyOperationsAborted) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "SHFileOperationW failed to recycle", result});
+            }
+        }
+
+        if (progress.OnProgress) {
+            progress.OnProgress(1, 1, req.Target.ToString());
+        }
+
+        return {};
+    });
 }
 
 } // namespace ExplorerX::Platform

@@ -12,7 +12,7 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 1.5:** Build config system (JSON-based settings, cache policies).
 - [x] **Phase 2.1:** Implement asynchronous directory enumeration.
 - [x] **Phase 2.2:** Implement metadata extraction (timestamps, attributes).
-- [ ] **Phase 2.3:** Build file operations (copy, move, delete) with progress events.
+- [x] **Phase 2.3:** Build file operations (copy, move, delete) with progress events.
 - [ ] **Phase 2.4:** Implement path normalization (UNC, reparse points).
 - [ ] **Phase 2.5:** Setup file system watcher.
 - [ ] **Phase 3.1:** Setup Qt 6 main window layout.
