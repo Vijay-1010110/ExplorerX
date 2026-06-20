@@ -16,6 +16,8 @@ target_link_libraries(ExplorerX
     PRIVATE
         Domain
         Core
+        Platform
+        Infrastructure
         Qt6::Widgets
         spdlog::spdlog
 )

@@ -3,21 +3,26 @@
 #include <vector>
 #include <memory>
 #include <QString>
+#include "../Domain/IFileSystemProvider.h"
 
-struct DummyNode {
+struct RealDirNode {
     QString name;
-    DummyNode* parent = nullptr;
-    std::vector<std::unique_ptr<DummyNode>> children;
+    QString fullPath;
+    RealDirNode* parent = nullptr;
+    std::vector<std::unique_ptr<RealDirNode>> children;
 
-    DummyNode(const QString& n, DummyNode* p = nullptr) : name(n), parent(p) {}
-    ~DummyNode() = default;
+    RealDirNode(const QString& n, const QString& p, RealDirNode* pParent = nullptr) 
+        : name(n), fullPath(p), parent(pParent) {}
+    ~RealDirNode() = default;
 };
 
 class DirectoryItemModel : public QAbstractItemModel {
     Q_OBJECT
 public:
-    explicit DirectoryItemModel(QObject *parent = nullptr);
+    explicit DirectoryItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider, QObject *parent = nullptr);
     ~DirectoryItemModel() override;
+
+    void loadPath(const std::string& path);
 
     QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
     QModelIndex parent(const QModelIndex &index) const override;
@@ -28,5 +33,6 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
 private:
-    std::unique_ptr<DummyNode> m_rootNode;
+    std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> m_provider;
+    std::unique_ptr<RealDirNode> m_rootNode;
 };

@@ -1,13 +1,16 @@
 #include "MainWindow.h"
 #include <QToolBar>
 #include <QSplitter>
+#include <QLineEdit>
 #include "Views/DirectoryTreeView.h"
 #include "Views/FileGridView.h"
 #include <QKeySequence>
 #include <spdlog/spdlog.h>
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent) {
+MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
+                       std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                       QWidget *parent)
+    : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
     setupUi();
     setupActions();
 }
@@ -22,21 +25,34 @@ void MainWindow::setupUi() {
     QToolBar *addressBar = addToolBar(QStringLiteral("Address Bar"));
     addressBar->setMovable(false);
 
+    m_searchBox = new QLineEdit(this);
+    m_searchBox->setPlaceholderText(QStringLiteral("Search..."));
+    addressBar->addWidget(m_searchBox);
+    connect(m_searchBox, &QLineEdit::returnPressed, this, &MainWindow::onSearchTriggered);
+
     // Main splitter for navigation and file grid
     QSplitter *mainSplitter = new QSplitter(Qt::Horizontal, this);
 
     // Left pane (navigation tree)
-    DirectoryTreeView *navTree = new DirectoryTreeView(mainSplitter);
-    mainSplitter->addWidget(navTree);
+    m_navTree = new DirectoryTreeView(m_provider, mainSplitter);
+    mainSplitter->addWidget(m_navTree);
 
     // Right pane (file grid)
-    FileGridView *fileGrid = new FileGridView(mainSplitter);
-    mainSplitter->addWidget(fileGrid);
+    m_fileGrid = new FileGridView(m_provider, m_searchEngine, mainSplitter);
+    mainSplitter->addWidget(m_fileGrid);
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
 
     setCentralWidget(mainSplitter);
+}
+
+void MainWindow::onSearchTriggered() {
+    QString query = m_searchBox->text();
+    spdlog::info("Search triggered for: {}", query.toStdString());
+    if (m_fileGrid) {
+        m_fileGrid->performSearch(query);
+    }
 }
 
 void MainWindow::setupActions() {

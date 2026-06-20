@@ -1,31 +1,54 @@
 #include "DirectoryItemModel.h"
+#include <thread>
+#include <spdlog/spdlog.h>
 
-DirectoryItemModel::DirectoryItemModel(QObject *parent) : QAbstractItemModel(parent) {
-    m_rootNode = std::make_unique<DummyNode>(QStringLiteral("Root"));
-    
-    auto cDrive = std::make_unique<DummyNode>(QStringLiteral("C: Drive"), m_rootNode.get());
-    cDrive->children.push_back(std::make_unique<DummyNode>(QStringLiteral("Windows"), cDrive.get()));
-    cDrive->children.push_back(std::make_unique<DummyNode>(QStringLiteral("Users"), cDrive.get()));
-    
-    auto dDrive = std::make_unique<DummyNode>(QStringLiteral("D: Drive"), m_rootNode.get());
-    dDrive->children.push_back(std::make_unique<DummyNode>(QStringLiteral("Documents"), dDrive.get()));
-    
-    m_rootNode->children.push_back(std::move(cDrive));
-    m_rootNode->children.push_back(std::move(dDrive));
+DirectoryItemModel::DirectoryItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider, QObject *parent) 
+    : QAbstractItemModel(parent), m_provider(std::move(provider)) {
+    m_rootNode = std::make_unique<RealDirNode>(QStringLiteral("Root"), QStringLiteral(""));
 }
 
 DirectoryItemModel::~DirectoryItemModel() = default;
+
+void DirectoryItemModel::loadPath(const std::string& path) {
+    if (!m_provider) return;
+    
+    std::thread([this, provider = m_provider, path]() {
+        auto future = provider->Enumerate(ExplorerX::Domain::Path(path));
+        auto result = future.get();
+        if (result) {
+            auto items = result.value().Items;
+            QMetaObject::invokeMethod(this, [this, path, items = std::move(items)]() mutable {
+                beginResetModel();
+                m_rootNode->children.clear();
+                for (const auto& item : items) {
+                    if (item.IsDirectory) {
+                        m_rootNode->children.push_back(
+                            std::make_unique<RealDirNode>(
+                                QString::fromStdString(item.Name), 
+                                QString::fromStdString(item.ItemPath.ToString()), 
+                                m_rootNode.get()
+                            )
+                        );
+                    }
+                }
+                endResetModel();
+            });
+        } else {
+            spdlog::error("DirectoryItemModel failed to load path: {}", path);
+        }
+    }).detach();
+}
 
 QModelIndex DirectoryItemModel::index(int row, int column, const QModelIndex &parent) const {
     if (!hasIndex(row, column, parent)) {
         return {};
     }
 
-    DummyNode *parentNode;
+    RealDirNode *parentNode;
     if (!parent.isValid()) {
         parentNode = m_rootNode.get();
     } else {
-        parentNode = static_cast<DummyNode*>(parent.internalPointer());
+        parentNode = static_cast<RealDirNode*>(parent.internalPointer());
     }
 
     if (row < parentNode->children.size()) {
@@ -39,14 +62,14 @@ QModelIndex DirectoryItemModel::parent(const QModelIndex &index) const {
         return {};
     }
 
-    auto *childNode = static_cast<DummyNode*>(index.internalPointer());
-    DummyNode *parentNode = childNode->parent;
+    auto *childNode = static_cast<RealDirNode*>(index.internalPointer());
+    RealDirNode *parentNode = childNode->parent;
 
     if (parentNode == m_rootNode.get() || parentNode == nullptr) {
         return {};
     }
 
-    DummyNode *grandParentNode = parentNode->parent;
+    RealDirNode *grandParentNode = parentNode->parent;
     if (!grandParentNode) return {};
 
     int row = 0;
@@ -65,11 +88,11 @@ int DirectoryItemModel::rowCount(const QModelIndex &parent) const {
         return 0;
     }
 
-    DummyNode *parentNode;
+    RealDirNode *parentNode;
     if (!parent.isValid()) {
         parentNode = m_rootNode.get();
     } else {
-        parentNode = static_cast<DummyNode*>(parent.internalPointer());
+        parentNode = static_cast<RealDirNode*>(parent.internalPointer());
     }
 
     return static_cast<int>(parentNode->children.size());
@@ -85,7 +108,7 @@ QVariant DirectoryItemModel::data(const QModelIndex &index, int role) const {
         return {};
     }
 
-    auto *node = static_cast<DummyNode*>(index.internalPointer());
+    auto *node = static_cast<RealDirNode*>(index.internalPointer());
     return node->name;
 }
 

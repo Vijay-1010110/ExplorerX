@@ -1,8 +1,8 @@
 #include "DirectoryTreeView.h"
 #include "../ViewModels/DirectoryItemModel.h"
 
-DirectoryTreeView::DirectoryTreeView(QWidget *parent)
-    : QTreeView(parent) {
+DirectoryTreeView::DirectoryTreeView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider, QWidget *parent)
+    : QTreeView(parent), m_provider(std::move(provider)) {
     setUniformRowHeights(true); // UI Virtualization: Optimize row heights
     
     // Drag and Drop support
@@ -11,13 +11,14 @@ DirectoryTreeView::DirectoryTreeView(QWidget *parent)
     setDropIndicatorShown(true);
     setDragDropMode(QAbstractItemView::DragDrop);
 
-    setupDummyModel();
+    setupRealModel();
 }
 
 DirectoryTreeView::~DirectoryTreeView() = default;
 
-void DirectoryTreeView::setupDummyModel() {
-    auto *model = new DirectoryItemModel(this);
-    setModel(model);
+void DirectoryTreeView::setupRealModel() {
+    m_model = new DirectoryItemModel(m_provider, this);
+    setModel(m_model);
+    m_model->loadPath("C:\\"); // Default root
     expandAll();
 }

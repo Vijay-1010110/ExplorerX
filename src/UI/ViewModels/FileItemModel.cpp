@@ -1,15 +1,54 @@
 #include "FileItemModel.h"
+#include <thread>
+#include <spdlog/spdlog.h>
 
-FileItemModel::FileItemModel(QObject *parent) : QAbstractTableModel(parent) {
-    m_files = {
-        {QStringLiteral("dummy_file.txt"), QStringLiteral("12 KB"), QStringLiteral("Text Document")},
-        {QStringLiteral("project_report.pdf"), QStringLiteral("2.5 MB"), QStringLiteral("PDF File")},
-        {QStringLiteral("holiday_photo.jpg"), QStringLiteral("4.1 MB"), QStringLiteral("JPEG Image")},
-        {QStringLiteral("archive.zip"), QStringLiteral("150 MB"), QStringLiteral("ZIP Archive")}
-    };
+FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
+                             std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                             QObject *parent)
+    : QAbstractTableModel(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
 }
 
 FileItemModel::~FileItemModel() = default;
+
+void FileItemModel::loadPath(const std::string& path) {
+    if (!m_provider) return;
+
+    std::thread([this, provider = m_provider, path]() {
+        auto future = provider->Enumerate(ExplorerX::Domain::Path(path));
+        auto result = future.get();
+        if (result) {
+            auto items = result.value().Items;
+            QMetaObject::invokeMethod(this, [this, items = std::move(items)]() mutable {
+                beginResetModel();
+                m_files = std::move(items);
+                endResetModel();
+            });
+        } else {
+            spdlog::error("Failed to load path: {}", path);
+        }
+    }).detach();
+}
+
+void FileItemModel::performSearch(const QString& query) {
+    if (!m_searchEngine) return;
+    std::string q = query.toStdString();
+    
+    std::thread([this, engine = m_searchEngine, q]() {
+        ExplorerX::Domain::SearchQuery searchQ{q, ExplorerX::Domain::Path("C:\\")};
+        auto future = engine->Query(searchQ);
+        auto result = future.get();
+        if (result) {
+            auto items = result.value().Matches;
+            QMetaObject::invokeMethod(this, [this, items = std::move(items)]() mutable {
+                beginResetModel();
+                m_files = std::move(items);
+                endResetModel();
+            });
+        } else {
+            spdlog::error("Failed to perform search: {}", q);
+        }
+    }).detach();
+}
 
 int FileItemModel::rowCount(const QModelIndex &parent) const {
     if (parent.isValid()) return 0;
@@ -28,9 +67,9 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
 
     const auto& file = m_files[index.row()];
     switch (index.column()) {
-        case 0: return file.name;
-        case 1: return file.size;
-        case 2: return file.type;
+        case 0: return QString::fromStdString(file.Name);
+        case 1: return QString::number(file.Size) + " bytes"; // Formatting can be improved later
+        case 2: return file.IsDirectory ? QStringLiteral("Folder") : QStringLiteral("File");
         default: return {};
     }
 }

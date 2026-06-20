@@ -108,4 +108,16 @@ std::future<Domain::Expected<Domain::SearchResults>> SqliteSearchEngine::Query(c
     });
 }
 
+std::future<Domain::Expected<void>> SqliteSearchEngine::IndexFile(const Domain::Path& path) {
+    return std::async(std::launch::async, []() -> Domain::Expected<void> {
+        return {};
+    });
+}
+
+std::future<Domain::Expected<void>> SqliteSearchEngine::RemoveEntry(const Domain::Path& path) {
+    return std::async(std::launch::async, []() -> Domain::Expected<void> {
+        return {};
+    });
+}
+
 } // namespace ExplorerX::Infrastructure::Index

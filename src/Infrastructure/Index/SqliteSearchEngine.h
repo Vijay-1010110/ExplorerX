@@ -13,6 +13,8 @@ public:
     ~SqliteSearchEngine() override;
 
     std::future<Domain::Expected<void>> IndexDirectory(const Domain::Path& path) override;
+    std::future<Domain::Expected<void>> IndexFile(const Domain::Path& path) override;
+    std::future<Domain::Expected<void>> RemoveEntry(const Domain::Path& path) override;
     std::future<Domain::Expected<Domain::SearchResults>> Query(const Domain::SearchQuery& query) override;
 
 private:

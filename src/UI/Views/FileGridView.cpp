@@ -2,8 +2,10 @@
 #include "../ViewModels/FileItemModel.h"
 #include <QHeaderView>
 
-FileGridView::FileGridView(QWidget *parent)
-    : QTableView(parent) {
+FileGridView::FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
+                           std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                           QWidget *parent)
+    : QTableView(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
     // UI Virtualization: Lock vertical header sizes to avoid recalculation
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
@@ -14,15 +16,22 @@ FileGridView::FileGridView(QWidget *parent)
     setDropIndicatorShown(true);
     setDragDropMode(QAbstractItemView::DragDrop);
     
-    setupDummyModel();
+    setupRealModel();
+    
+    // Stretch the name column
+    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
 }
 
 FileGridView::~FileGridView() = default;
 
-void FileGridView::setupDummyModel() {
-    auto *model = new FileItemModel(this);
-    setModel(model);
-    
-    // Stretch the name column
-    horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+void FileGridView::setupRealModel() {
+    m_model = new FileItemModel(m_provider, m_searchEngine, this);
+    setModel(m_model);
+    m_model->loadPath("C:\\");
+}
+
+void FileGridView::performSearch(const QString& query) {
+    if (m_model) {
+        m_model->performSearch(query);
+    }
 }
