@@ -3,6 +3,7 @@
 #include "FileItem.h"
 #include "Expected.h"
 #include <vector>
+#include <future>
 
 namespace ExplorerX::Domain {
 
@@ -15,7 +16,7 @@ class IFileSystemProvider {
 public:
     virtual ~IFileSystemProvider() = default;
 
-    virtual Expected<ListingResult> Enumerate(const Path& path) = 0;
+    virtual std::future<Expected<ListingResult>> Enumerate(const Path& path) = 0;
     virtual Expected<void> Copy(const CopyRequest& req) = 0;
     virtual Expected<void> Move(const MoveRequest& req) = 0;
     virtual Expected<void> Delete(const DeleteRequest& req) = 0;
