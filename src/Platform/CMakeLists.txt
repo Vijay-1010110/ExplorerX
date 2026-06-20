@@ -3,6 +3,8 @@ add_library(Platform
     WinFileSystemProvider.h
     WinPathHelper.cpp
     WinPathHelper.h
+    WinFileSystemWatcher.cpp
+    WinFileSystemWatcher.h
 )
 
 target_link_libraries(Platform
