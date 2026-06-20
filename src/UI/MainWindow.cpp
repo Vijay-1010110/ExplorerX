@@ -1,8 +1,8 @@
 #include "MainWindow.h"
 #include <QToolBar>
 #include <QSplitter>
-#include <QTableView>
-#include <QTreeView>
+#include "Views/DirectoryTreeView.h"
+#include "Views/FileGridView.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -23,11 +23,11 @@ void MainWindow::setupUi() {
     QSplitter *mainSplitter = new QSplitter(Qt::Horizontal, this);
 
     // Left pane (navigation tree)
-    QTreeView *navTree = new QTreeView(mainSplitter);
+    DirectoryTreeView *navTree = new DirectoryTreeView(mainSplitter);
     mainSplitter->addWidget(navTree);
 
     // Right pane (file grid)
-    QTableView *fileGrid = new QTableView(mainSplitter);
+    FileGridView *fileGrid = new FileGridView(mainSplitter);
     mainSplitter->addWidget(fileGrid);
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
