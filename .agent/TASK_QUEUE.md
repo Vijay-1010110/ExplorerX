@@ -19,6 +19,6 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 3.2:** Implement Core Views (tree view, file grid).
 - [x] **Phase 3.3:** Implement UI Virtualization for file lists.
 - [x] **Phase 3.4:** Add interaction models (drag/drop, shortcuts).
-- [ ] **Milestone 3:** SQLite index integration.
+- [x] **Milestone 3:** SQLite index integration.
 - [ ] **Milestone 6:** Thumbnail and Preview engine.
 - [ ] **Milestone 10:** AI Command and Intent agent integration.

@@ -3,6 +3,8 @@ add_library(Infrastructure
     SpdLogProvider.h
     JsonConfigProvider.cpp
     JsonConfigProvider.h
+    Index/SqliteSearchEngine.cpp
+    Index/SqliteSearchEngine.h
 )
 
 target_link_libraries(Infrastructure

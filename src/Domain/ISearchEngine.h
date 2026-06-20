@@ -4,6 +4,7 @@
 #include "Expected.h"
 #include <string>
 #include <vector>
+#include <future>
 
 namespace ExplorerX::Domain {
 
@@ -17,8 +18,8 @@ class ISearchEngine {
 public:
     virtual ~ISearchEngine() = default;
 
-    virtual Expected<void> IndexDirectory(const Path& path) = 0;
-    virtual Expected<SearchResults> Query(const SearchQuery& query) = 0;
+    virtual std::future<Expected<void>> IndexDirectory(const Path& path) = 0;
+    virtual std::future<Expected<SearchResults>> Query(const SearchQuery& query) = 0;
 };
 
 } // namespace ExplorerX::Domain
