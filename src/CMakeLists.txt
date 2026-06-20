@@ -1,0 +1,5 @@
+add_subdirectory(Domain)
+# add_subdirectory(Core)
+# add_subdirectory(Platform)
+add_subdirectory(Infrastructure)
+# add_subdirectory(UI)
