@@ -4,8 +4,9 @@
 
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                             std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
                              QObject *parent)
-    : QAbstractTableModel(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
+    : QAbstractTableModel(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)) {
 }
 
 FileItemModel::~FileItemModel() = default;
@@ -61,17 +62,63 @@ int FileItemModel::columnCount(const QModelIndex &parent) const {
 }
 
 QVariant FileItemModel::data(const QModelIndex &index, int role) const {
-    if (!index.isValid() || role != Qt::DisplayRole) {
-        return {};
-    }
+    if (!index.isValid()) return {};
 
     const auto& file = m_files[index.row()];
-    switch (index.column()) {
-        case 0: return QString::fromStdString(file.Name);
-        case 1: return QString::number(file.Size) + " bytes"; // Formatting can be improved later
-        case 2: return file.IsDirectory ? QStringLiteral("Folder") : QStringLiteral("File");
-        default: return {};
+    
+    if (role == Qt::DisplayRole) {
+        switch (index.column()) {
+            case 0: return QString::fromStdString(file.Name);
+            case 1: return QString::number(file.Size) + " bytes"; // Formatting can be improved later
+            case 2: return file.IsDirectory ? QStringLiteral("Folder") : QStringLiteral("File");
+            default: return {};
+        }
+    } else if (role == Qt::DecorationRole && index.column() == 0) {
+        std::string pathStr = file.ItemPath.ToString();
+        
+        if (m_iconCache.find(pathStr) != m_iconCache.end()) {
+            return m_iconCache[pathStr];
+        }
+        
+        if (m_thumbOrchestrator && m_pendingThumbnails.find(pathStr) == m_pendingThumbnails.end()) {
+            m_pendingThumbnails.insert(pathStr);
+            QPersistentModelIndex pIndex(index);
+            
+            std::thread([this, pIndex, orchestrator = m_thumbOrchestrator, path = file.ItemPath, pathStr]() {
+                auto future = orchestrator->GetThumbnailAsync(path, 32);
+                auto result = future.get();
+                if (result) {
+                    auto thumbnail = result.value();
+                    if (!thumbnail.Data.empty()) {
+                        QImage img;
+                        img.loadFromData(thumbnail.Data.data(), thumbnail.Data.size());
+                        if (!img.isNull()) {
+                            auto* self = const_cast<FileItemModel*>(this);
+                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, img]() {
+                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(img));
+                                self->m_pendingThumbnails.erase(pathStr);
+                                if (pIndex.isValid()) {
+                                    emit self->dataChanged(pIndex, pIndex, {Qt::DecorationRole});
+                                }
+                            });
+                            return;
+                        }
+                    }
+                }
+                
+                // Fallback or error
+                auto* self = const_cast<FileItemModel*>(this);
+                QMetaObject::invokeMethod(self, [self, pathStr]() {
+                    self->m_pendingThumbnails.erase(pathStr);
+                });
+            }).detach();
+        }
+        
+        // Return a generic fallback while loading or if it failed
+        return file.IsDirectory ? QIcon::fromTheme("folder") : QIcon::fromTheme("text-x-generic");
     }
+
+    return {};
 }
 
 QVariant FileItemModel::headerData(int section, Qt::Orientation orientation, int role) const {

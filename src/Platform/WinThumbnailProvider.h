@@ -6,16 +6,16 @@
 #include <cstdint>
 #include <future>
 
+#include "../Domain/IThumbnailProvider.h"
+
 namespace ExplorerX::Platform {
 
-class WinThumbnailProvider {
+class WinThumbnailProvider : public Domain::IThumbnailProvider {
 public:
     WinThumbnailProvider() = default;
-    ~WinThumbnailProvider() = default;
+    ~WinThumbnailProvider() override = default;
 
-    // Asynchronously extracts a thumbnail or icon for the given path, returning PNG bytes.
-    // size: requested thumbnail/icon dimension (e.g., 256 for a 256x256 image).
-    std::future<Domain::Expected<std::vector<uint8_t>>> GetThumbnail(const Domain::Path& path, int size = 256);
+    std::future<Domain::Expected<Domain::ThumbnailImage>> GetThumbnailAsync(const Domain::Path& path, int targetSize) override;
 };
 
 } // namespace ExplorerX::Platform

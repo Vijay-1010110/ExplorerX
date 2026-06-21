@@ -6,6 +6,9 @@
 #include "../Infrastructure/Index/SqliteSearchEngine.h"
 #include "../Core/IndexOrchestrator.h"
 
+#include "../Platform/WinThumbnailProvider.h"
+#include "../Core/ThumbnailOrchestrator.h"
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     
@@ -13,11 +16,15 @@ int main(int argc, char *argv[]) {
     auto watcher = std::make_shared<ExplorerX::Platform::WinFileSystemWatcher>();
     auto searchEngine = std::make_shared<ExplorerX::Infrastructure::Index::SqliteSearchEngine>("explorerx_index.db");
     
+    // Thumbnails
+    auto thumbProvider = std::make_shared<ExplorerX::Platform::WinThumbnailProvider>();
+    auto thumbOrchestrator = std::make_shared<ExplorerX::Core::ThumbnailOrchestrator>(thumbProvider);
+    
     // Start indexer orchestration
     auto orchestrator = std::make_shared<ExplorerX::Core::IndexOrchestrator>(watcher, searchEngine);
     orchestrator->Start(ExplorerX::Domain::Path("C:\\"));
     
-    MainWindow window(provider, searchEngine);
+    MainWindow window(provider, searchEngine, thumbOrchestrator);
     window.show();
     
     return app.exec();
