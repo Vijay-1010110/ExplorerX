@@ -5,6 +5,8 @@ add_library(Core
     IndexOrchestrator.h
     ThumbnailOrchestrator.cpp
     ThumbnailOrchestrator.h
+    AIIntentOrchestrator.cpp
+    AIIntentOrchestrator.h
 )
 
 target_include_directories(Core PUBLIC
