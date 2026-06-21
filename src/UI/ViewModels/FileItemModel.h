@@ -23,6 +23,9 @@ public:
     void loadPath(const std::string& path);
     void performSearch(const QString& query);
 
+    bool isDirectory(const QModelIndex& index) const;
+    QString filePath(const QModelIndex& index) const;
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;

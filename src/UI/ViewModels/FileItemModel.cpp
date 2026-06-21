@@ -30,6 +30,16 @@ void FileItemModel::loadPath(const std::string& path) {
     }).detach();
 }
 
+bool FileItemModel::isDirectory(const QModelIndex& index) const {
+    if (!index.isValid() || index.row() >= m_files.size()) return false;
+    return m_files[index.row()].IsDirectory;
+}
+
+QString FileItemModel::filePath(const QModelIndex& index) const {
+    if (!index.isValid() || index.row() >= m_files.size()) return {};
+    return QString::fromStdString(m_files[index.row()].ItemPath.ToString());
+}
+
 void FileItemModel::performSearch(const QString& query) {
     if (!m_searchEngine) return;
     std::string q = query.toStdString();
