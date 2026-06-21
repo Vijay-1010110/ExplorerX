@@ -4,6 +4,7 @@
 #include <regex>
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 
 namespace ExplorerX::Infrastructure::Index {
 
@@ -86,16 +87,63 @@ Domain::Expected<void> SqliteSearchEngine::InitializeDatabase() {
 }
 
 std::future<Domain::Expected<void>> SqliteSearchEngine::IndexDirectory(const Domain::Path& path) {
-    // Return an asynchronous operation
     return std::async(std::launch::async, [this, path]() -> Domain::Expected<void> {
-        // Placeholder for actual recursive directory indexing.
         std::lock_guard<std::mutex> lock(m_dbMutex);
         if (!m_db) {
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Database not initialized"});
         }
-        
-        // For scaffolding, we just return success
-        return {};
+
+        std::string rootStr = path.ToString();
+        if (rootStr.empty()) return {};
+
+        auto execRes = ExecSql("BEGIN TRANSACTION;");
+        if (!execRes) return execRes;
+
+        const char* insertSql = R"(
+            INSERT OR REPLACE INTO files (path, name, size, last_modified, parent_path)
+            VALUES (?, ?, ?, ?, ?);
+        )";
+
+        sqlite3_stmt* stmt = nullptr;
+        if (sqlite3_prepare_v2(m_db, insertSql, -1, &stmt, nullptr) != SQLITE_OK) {
+            ExecSql("ROLLBACK;");
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Prepare failed"});
+        }
+
+        try {
+            // Using directory_options::skip_permission_denied to safely traverse
+            auto options = std::filesystem::directory_options::skip_permission_denied;
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(rootStr, options)) {
+                if (!entry.is_regular_file()) continue;
+
+                std::string filePath = entry.path().string();
+                std::string name = entry.path().filename().string();
+                std::string parentPath = entry.path().parent_path().string();
+                
+                uint64_t size = 0;
+                try { size = entry.file_size(); } catch (...) {}
+                
+                uint64_t lastMod = 0;
+                try { 
+                    auto ftime = entry.last_write_time();
+                    lastMod = std::chrono::duration_cast<std::chrono::seconds>(ftime.time_since_epoch()).count();
+                } catch (...) {}
+
+                sqlite3_reset(stmt);
+                sqlite3_bind_text(stmt, 1, filePath.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_int64(stmt, 3, size);
+                sqlite3_bind_int64(stmt, 4, lastMod);
+                sqlite3_bind_text(stmt, 5, parentPath.c_str(), -1, SQLITE_TRANSIENT);
+
+                sqlite3_step(stmt);
+            }
+        } catch (const std::exception& e) {
+            // Best effort extraction
+        }
+
+        sqlite3_finalize(stmt);
+        return ExecSql("COMMIT;");
     });
 }
 
@@ -109,6 +157,17 @@ std::future<Domain::Expected<Domain::SearchResults>> SqliteSearchEngine::Query(c
         std::string keyword = query.Keyword;
         std::vector<std::string> whereClauses;
         std::string ftsMatch;
+
+        std::string rootPathStr = query.RootPath.ToString();
+        if (!rootPathStr.empty()) {
+            if (rootPathStr.back() != '\\' && rootPathStr.back() != '/') {
+                rootPathStr += "\\"; // Enforce directory boundary
+            }
+            // Add safe LIKE clause to filter by scope
+            std::string safePath = rootPathStr;
+            std::replace(safePath.begin(), safePath.end(), '\'', '_'); // simple escape
+            whereClauses.push_back("(f.path LIKE '" + safePath + "%')");
+        }
 
         // Parse AQS features using regexes for simplicity in scaffolding
         std::regex kindRegex(R"(kind:([a-zA-Z]+))");
