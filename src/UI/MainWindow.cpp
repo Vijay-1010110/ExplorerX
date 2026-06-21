@@ -2,17 +2,23 @@
 #include <QToolBar>
 #include <QSplitter>
 #include <QLineEdit>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QStatusBar>
 #include "Views/DirectoryTreeView.h"
 #include "Views/FileGridView.h"
 #include "ViewModels/DirectoryItemModel.h"
 #include <QKeySequence>
 #include <spdlog/spdlog.h>
+#include <thread>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
                        std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
+                       std::shared_ptr<ExplorerX::Core::AIIntentOrchestrator> aiOrchestrator,
                        QWidget *parent)
-    : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)) {
+    : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)), m_aiOrchestrator(std::move(aiOrchestrator)) {
     setupUi();
     setupActions();
 }
@@ -23,17 +29,33 @@ void MainWindow::setupUi() {
     setWindowTitle(QStringLiteral("ExplorerX"));
     resize(1024, 768);
 
-    // Top toolbar (address bar)
-    QToolBar *addressBar = addToolBar(QStringLiteral("Address Bar"));
-    addressBar->setMovable(false);
+    // Main widget and layout
+    QWidget* centralWidget = new QWidget(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+    
+    // Top bar containing AI command bar and search box
+    QWidget* topBar = new QWidget(centralWidget);
+    QHBoxLayout* topLayout = new QHBoxLayout(topBar);
+    topLayout->setContentsMargins(5, 5, 5, 5);
+    
+    // AI Command Box (Distinct styling)
+    m_aiCommandBox = new QLineEdit(topBar);
+    m_aiCommandBox->setPlaceholderText("Ask the AI to do something...");
+    m_aiCommandBox->setStyleSheet("QLineEdit { border: 2px solid #0078D7; border-radius: 4px; padding: 4px; font-weight: bold; }");
+    topLayout->addWidget(m_aiCommandBox, 1); // stretch factor 1
+    
+    // Search Box
+    m_searchBox = new QLineEdit(topBar);
+    m_searchBox->setPlaceholderText("Search...");
+    m_searchBox->setMaximumWidth(300);
+    topLayout->addWidget(m_searchBox, 0);
 
-    m_searchBox = new QLineEdit(this);
-    m_searchBox->setPlaceholderText(QStringLiteral("Search..."));
-    addressBar->addWidget(m_searchBox);
-    connect(m_searchBox, &QLineEdit::returnPressed, this, &MainWindow::onSearchTriggered);
+    mainLayout->addWidget(topBar);
 
-    // Main splitter for navigation and file grid
-    QSplitter *mainSplitter = new QSplitter(Qt::Horizontal, this);
+    // Splitter for navigation and file grid
+    QSplitter* mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
 
     // Left pane (navigation tree)
     m_navTree = new DirectoryTreeView(m_provider, mainSplitter);
@@ -45,11 +67,19 @@ void MainWindow::setupUi() {
 
     // Wire navigation tree clicks to the file grid
     connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
+    connect(m_searchBox, &QLineEdit::returnPressed, this, &MainWindow::onSearchTriggered);
+    connect(m_aiCommandBox, &QLineEdit::returnPressed, this, &MainWindow::onAICommandTriggered);
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
 
-    setCentralWidget(mainSplitter);
+    mainLayout->addWidget(mainSplitter, 1);
+    
+    // Status Bar label for AI Feedback
+    m_aiStatusLabel = new QLabel(this);
+    statusBar()->addWidget(m_aiStatusLabel);
+    
+    setCentralWidget(centralWidget);
 }
 
 void MainWindow::onDirectorySelected(const QModelIndex& index) {
@@ -69,6 +99,35 @@ void MainWindow::onSearchTriggered() {
     spdlog::info("Search triggered for: {}", query.toStdString());
     if (m_fileGrid) {
         m_fileGrid->performSearch(query);
+    }
+}
+
+void MainWindow::onAICommandTriggered() {
+    QString command = m_aiCommandBox->text();
+    if (command.isEmpty()) return;
+    
+    spdlog::info("AI Command triggered: {}", command.toStdString());
+    
+    // Show feedback
+    m_aiStatusLabel->setText("AI is processing...");
+    m_aiCommandBox->setEnabled(false);
+    
+    if (m_aiOrchestrator) {
+        std::thread([this, commandStr = command.toStdString()]() {
+            auto future = m_aiOrchestrator->ExecuteNaturalLanguageCommand(commandStr);
+            auto result = future.get();
+            
+            QMetaObject::invokeMethod(this, [this, result]() {
+                m_aiCommandBox->setEnabled(true);
+                m_aiCommandBox->clear();
+                
+                if (result.has_value()) {
+                    m_aiStatusLabel->setText("AI processing complete.");
+                } else {
+                    m_aiStatusLabel->setText(QString("AI Error: %1").arg(QString::fromStdString(result.error().Message)));
+                }
+            });
+        }).detach();
     }
 }
 

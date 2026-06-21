@@ -5,8 +5,10 @@
 #include "../Domain/ISearchEngine.h"
 
 #include "../Core/ThumbnailOrchestrator.h"
+#include "../Core/AIIntentOrchestrator.h"
 
 class QLineEdit;
+class QLabel;
 class DirectoryTreeView;
 class FileGridView;
 
@@ -17,6 +19,7 @@ public:
     explicit MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                         std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
                         std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
+                        std::shared_ptr<ExplorerX::Core::AIIntentOrchestrator> aiOrchestrator,
                         QWidget *parent = nullptr);
     ~MainWindow() override;
 
@@ -27,6 +30,7 @@ private slots:
     void onDelete();
     void onSearchTriggered();
     void onDirectorySelected(const QModelIndex& index);
+    void onAICommandTriggered();
 
 private:
     void setupUi();
@@ -35,8 +39,11 @@ private:
     std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> m_provider;
     std::shared_ptr<ExplorerX::Domain::ISearchEngine> m_searchEngine;
     std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> m_thumbOrchestrator;
+    std::shared_ptr<ExplorerX::Core::AIIntentOrchestrator> m_aiOrchestrator;
     
     QLineEdit* m_searchBox = nullptr;
+    QLineEdit* m_aiCommandBox = nullptr;
+    QLabel* m_aiStatusLabel = nullptr;
     DirectoryTreeView* m_navTree = nullptr;
     FileGridView* m_fileGrid = nullptr;
 };
