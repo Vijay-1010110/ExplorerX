@@ -5,7 +5,10 @@
     "spdlog",
     "tl-expected",
     "nlohmann-json",
-    "sqlite3",
+    {
+      "name": "sqlite3",
+      "features": ["fts5"]
+    },
     "gtest"
   ]
 }
