@@ -7,6 +7,7 @@
 #include "../Core/IndexOrchestrator.h"
 
 #include "../Platform/WinThumbnailProvider.h"
+#include "../Platform/LLMClient.h"
 #include "../Core/ThumbnailOrchestrator.h"
 #include "../Core/AIIntentOrchestrator.h"
 
@@ -22,7 +23,8 @@ int main(int argc, char *argv[]) {
     auto thumbOrchestrator = std::make_shared<ExplorerX::Core::ThumbnailOrchestrator>(thumbProvider);
     
     // AI Intent Orchestrator
-    auto aiOrchestrator = std::make_shared<ExplorerX::Core::AIIntentOrchestrator>(provider, searchEngine);
+    auto llmClient = std::make_shared<ExplorerX::Platform::LLMClient>();
+    auto aiOrchestrator = std::make_shared<ExplorerX::Core::AIIntentOrchestrator>(provider, searchEngine, llmClient);
     
     // Start indexer orchestration
     auto orchestrator = std::make_shared<ExplorerX::Core::IndexOrchestrator>(watcher, searchEngine);

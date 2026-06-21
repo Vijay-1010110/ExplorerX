@@ -7,6 +7,8 @@ add_library(Platform
     WinFileSystemWatcher.h
     WinThumbnailProvider.cpp
     WinThumbnailProvider.h
+    LLMClient.cpp
+    LLMClient.h
 )
 
 target_link_libraries(Platform
