@@ -196,6 +196,9 @@ void MainWindow::setupUi() {
     // Right pane (file grid)
     m_fileGrid = new FileGridView(m_provider, m_searchEngine, m_thumbOrchestrator, mainSplitter);
     mainSplitter->addWidget(m_fileGrid);
+    
+    // Wire Search Box Live Typing
+    connect(m_searchBox, &QLineEdit::textChanged, m_fileGrid, &FileGridView::setLocalFilter);
 
     // Wire navigation tree clicks to the file grid
     connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
@@ -236,8 +239,13 @@ void MainWindow::onDirectorySelected(const QModelIndex& index) {
 }
 
 void MainWindow::onSearchTriggered() {
+    if (!m_searchBox || !m_fileGrid) return;
+    
     QString query = m_searchBox->text();
     if (query.isEmpty()) return;
+    
+    // Clear local filter before displaying deep search results
+    m_fileGrid->setLocalFilter("");
     
     spdlog::info("Search triggered for: {}", query.toStdString());
     m_aiStatusLabel->setText("Searching...");

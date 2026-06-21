@@ -30,7 +30,14 @@ FileGridView::~FileGridView() = default;
 
 void FileGridView::setupRealModel() {
     m_model = new FileItemModel(m_provider, m_searchEngine, m_thumbOrchestrator, this);
-    setModel(m_model);
+    
+    m_proxyModel = new QSortFilterProxyModel(this);
+    m_proxyModel->setSourceModel(m_model);
+    m_proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+    m_proxyModel->setFilterKeyColumn(0);
+    
+    setModel(m_proxyModel);
+    
     m_model->loadPath("C:\\");
 }
 
@@ -43,5 +50,11 @@ void FileGridView::setSearchResults(std::vector<ExplorerX::Domain::FileItem> res
 void FileGridView::loadPath(const QString& path) {
     if (m_model) {
         m_model->loadPath(path.toStdString());
+    }
+}
+
+void FileGridView::setLocalFilter(const QString& filterText) {
+    if (m_proxyModel) {
+        m_proxyModel->setFilterWildcard("*" + filterText + "*");
     }
 }
