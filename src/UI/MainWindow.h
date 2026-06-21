@@ -41,6 +41,14 @@ private slots:
     void onUpClicked();
     void onRefreshClicked();
     void onAddressBarReturnPressed();
+    
+    // Command Bar slots
+    void onRename();
+    void onShare();
+    void onNewFolder();
+    void onNewFile();
+    void onSortChanged(int index);
+    void onViewModeChanged(int index);
 
 private:
     void setupUi();

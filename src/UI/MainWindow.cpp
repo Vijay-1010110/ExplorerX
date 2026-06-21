@@ -20,6 +20,9 @@
 #include <QFrame>
 #include <QApplication>
 #include <QStyle>
+#include <QToolBar>
+#include <QMenu>
+#include <QAction>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -117,6 +120,71 @@ void MainWindow::setupUi() {
     topLayout->addWidget(m_searchBox, 0);
 
     mainLayout->addWidget(topBar);
+
+    // Command Bar
+    QToolBar* commandBar = new QToolBar(centralWidget);
+    commandBar->setMovable(false);
+    commandBar->setStyleSheet("QToolBar { border: none; border-bottom: 1px solid #CCCCCC; padding: 2px; }");
+    
+    // New Dropdown
+    QToolButton* btnNew = new QToolButton(commandBar);
+    btnNew->setText("New");
+    btnNew->setPopupMode(QToolButton::InstantPopup);
+    QMenu* menuNew = new QMenu(btnNew);
+    QAction* actionNewFolder = menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_DirIcon), "New Folder");
+    QAction* actionNewFile = menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), "New File");
+    btnNew->setMenu(menuNew);
+    commandBar->addWidget(btnNew);
+    
+    commandBar->addSeparator();
+    
+    // Core Actions
+    QAction* actionCut = commandBar->addAction("✂️ Cut");
+    QAction* actionCopy = commandBar->addAction("📋 Copy");
+    QAction* actionPaste = commandBar->addAction("📋 Paste");
+    QAction* actionRename = commandBar->addAction("Rename");
+    QAction* actionShare = commandBar->addAction("Share");
+    QAction* actionDelete = commandBar->addAction("🗑️ Delete");
+    
+    commandBar->addSeparator();
+    
+    // Sort Dropdown
+    QToolButton* btnSort = new QToolButton(commandBar);
+    btnSort->setText("Sort");
+    btnSort->setPopupMode(QToolButton::InstantPopup);
+    QMenu* menuSort = new QMenu(btnSort);
+    QAction* actionSortName = menuSort->addAction("Name");
+    QAction* actionSortSize = menuSort->addAction("Size");
+    QAction* actionSortType = menuSort->addAction("Type");
+    btnSort->setMenu(menuSort);
+    commandBar->addWidget(btnSort);
+    
+    // View Dropdown
+    QToolButton* btnView = new QToolButton(commandBar);
+    btnView->setText("View");
+    btnView->setPopupMode(QToolButton::InstantPopup);
+    QMenu* menuView = new QMenu(btnView);
+    QAction* actionViewGrid = menuView->addAction("Grid View");
+    QAction* actionViewList = menuView->addAction("List View");
+    btnView->setMenu(menuView);
+    commandBar->addWidget(btnView);
+    
+    // Wire Command Bar
+    connect(actionNewFolder, &QAction::triggered, this, &MainWindow::onNewFolder);
+    connect(actionNewFile, &QAction::triggered, this, &MainWindow::onNewFile);
+    connect(actionCut, &QAction::triggered, this, &MainWindow::onCut);
+    connect(actionCopy, &QAction::triggered, this, &MainWindow::onCopy);
+    connect(actionPaste, &QAction::triggered, this, &MainWindow::onPaste);
+    connect(actionRename, &QAction::triggered, this, &MainWindow::onRename);
+    connect(actionShare, &QAction::triggered, this, &MainWindow::onShare);
+    connect(actionDelete, &QAction::triggered, this, &MainWindow::onDelete);
+    connect(actionSortName, &QAction::triggered, this, [this]() { onSortChanged(0); });
+    connect(actionSortSize, &QAction::triggered, this, [this]() { onSortChanged(1); });
+    connect(actionSortType, &QAction::triggered, this, [this]() { onSortChanged(2); });
+    connect(actionViewGrid, &QAction::triggered, this, [this]() { onViewModeChanged(0); });
+    connect(actionViewList, &QAction::triggered, this, [this]() { onViewModeChanged(1); });
+    
+    mainLayout->addWidget(commandBar);
 
     // Splitter for navigation and file grid
     QSplitter* mainSplitter = new QSplitter(Qt::Horizontal, centralWidget);
@@ -466,3 +534,22 @@ void MainWindow::onCopy() { spdlog::info("Copy action triggered"); }
 void MainWindow::onPaste() { spdlog::info("Paste action triggered"); }
 void MainWindow::onCut() { spdlog::info("Cut action triggered"); }
 void MainWindow::onDelete() { spdlog::info("Delete action triggered"); }
+
+void MainWindow::onRename() { spdlog::info("Rename action triggered"); }
+void MainWindow::onShare() { spdlog::info("Share action triggered"); }
+void MainWindow::onNewFolder() { spdlog::info("New Folder action triggered"); }
+void MainWindow::onNewFile() { spdlog::info("New File action triggered"); }
+
+void MainWindow::onSortChanged(int index) {
+    const char* sorts[] = {"Name", "Size", "Type"};
+    if (index >= 0 && index < 3) {
+        spdlog::info("Sort changed to: {}", sorts[index]);
+    }
+}
+
+void MainWindow::onViewModeChanged(int index) {
+    const char* modes[] = {"Grid View", "List View"};
+    if (index >= 0 && index < 2) {
+        spdlog::info("View mode changed to: {}", modes[index]);
+    }
+}
