@@ -3,6 +3,8 @@ add_library(Core
     FileOperationOrchestrator.h
     IndexOrchestrator.cpp
     IndexOrchestrator.h
+    ThumbnailOrchestrator.cpp
+    ThumbnailOrchestrator.h
 )
 
 target_include_directories(Core PUBLIC
