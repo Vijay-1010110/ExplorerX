@@ -23,6 +23,7 @@
 #include <QToolBar>
 #include <QMenu>
 #include <QAction>
+#include <QSortFilterProxyModel>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -311,11 +312,14 @@ void MainWindow::onAICommandTriggered() {
 }
 
 void MainWindow::onFileGridDoubleClicked(const QModelIndex& index) {
-    if (!index.isValid()) return;
-    
-    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
-    if (fileModel && fileModel->isDirectory(index)) {
-        QString path = fileModel->filePath(index);
+    auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+    if (!proxyModel) return;
+    QModelIndex sourceIndex = proxyModel->mapToSource(index);
+    auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
+    if (!fileModel) return;
+
+    if (fileModel->isDirectory(sourceIndex)) {
+        QString path = fileModel->filePath(sourceIndex);
         navigateTo(path, true);
     }
 }
@@ -541,9 +545,12 @@ void MainWindow::setupActions() {
 void MainWindow::onCopy() { 
     auto index = m_fileGrid->selectionModel()->currentIndex();
     if (!index.isValid()) return;
-    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+    if (!proxyModel) return;
+    QModelIndex sourceIndex = proxyModel->mapToSource(index);
+    auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
     if (fileModel) {
-        m_clipboardPath = fileModel->filePath(index);
+        m_clipboardPath = fileModel->filePath(sourceIndex);
         m_clipboardIsCut = false;
         spdlog::info("Copied: {}", m_clipboardPath.toStdString());
     }
@@ -552,9 +559,12 @@ void MainWindow::onCopy() {
 void MainWindow::onCut() { 
     auto index = m_fileGrid->selectionModel()->currentIndex();
     if (!index.isValid()) return;
-    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+    if (!proxyModel) return;
+    QModelIndex sourceIndex = proxyModel->mapToSource(index);
+    auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
     if (fileModel) {
-        m_clipboardPath = fileModel->filePath(index);
+        m_clipboardPath = fileModel->filePath(sourceIndex);
         m_clipboardIsCut = true;
         spdlog::info("Cut: {}", m_clipboardPath.toStdString());
     }
@@ -590,9 +600,12 @@ void MainWindow::onPaste() {
 void MainWindow::onDelete() { 
     auto index = m_fileGrid->selectionModel()->currentIndex();
     if (!index.isValid()) return;
-    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+    if (!proxyModel) return;
+    QModelIndex sourceIndex = proxyModel->mapToSource(index);
+    auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
     if (fileModel) {
-        QString path = fileModel->filePath(index);
+        QString path = fileModel->filePath(sourceIndex);
         spdlog::info("Deleting: {}", path.toStdString());
         
         std::thread([this, pathStr = path.toStdString()]() {
@@ -609,9 +622,12 @@ void MainWindow::onDelete() {
 void MainWindow::onRename() { 
     auto index = m_fileGrid->selectionModel()->currentIndex();
     if (!index.isValid()) return;
-    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+    if (!proxyModel) return;
+    QModelIndex sourceIndex = proxyModel->mapToSource(index);
+    auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
     if (fileModel) {
-        QString oldPathStr = fileModel->filePath(index);
+        QString oldPathStr = fileModel->filePath(sourceIndex);
         std::filesystem::path oldPath(oldPathStr.toStdString());
         
         bool ok;
