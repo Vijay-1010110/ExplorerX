@@ -28,6 +28,8 @@ public:
     virtual std::future<Expected<void>> Copy(const CopyRequest& req, const ProgressContext& progress = {}) = 0;
     virtual std::future<Expected<void>> Move(const MoveRequest& req, const ProgressContext& progress = {}) = 0;
     virtual std::future<Expected<void>> Delete(const DeleteRequest& req, const ProgressContext& progress = {}) = 0;
+    virtual std::future<Expected<void>> CreateFolder(const Path& path) = 0;
+    virtual std::future<Expected<void>> CreateEmptyFile(const Path& path) = 0;
 };
 
 } // namespace ExplorerX::Domain

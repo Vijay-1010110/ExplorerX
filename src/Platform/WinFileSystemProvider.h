@@ -15,6 +15,8 @@ public:
     std::future<Domain::Expected<void>> Copy(const Domain::CopyRequest& req, const Domain::ProgressContext& progress = {}) override;
     std::future<Domain::Expected<void>> Move(const Domain::MoveRequest& req, const Domain::ProgressContext& progress = {}) override;
     std::future<Domain::Expected<void>> Delete(const Domain::DeleteRequest& req, const Domain::ProgressContext& progress = {}) override;
+    std::future<Domain::Expected<void>> CreateFolder(const Domain::Path& path) override;
+    std::future<Domain::Expected<void>> CreateEmptyFile(const Domain::Path& path) override;
 };
 
 } // namespace ExplorerX::Platform

@@ -15,6 +15,7 @@ enum class ErrorCode {
     UnsupportedReparsePoint,
     NotFound,
     InvalidFormat,
+    AlreadyExists,
     Unknown
 };
 

@@ -264,4 +264,63 @@ std::future<Domain::Expected<void>> WinFileSystemProvider::Delete(const Domain::
     });
 }
 
+std::future<Domain::Expected<void>> WinFileSystemProvider::CreateFolder(const Domain::Path& path) {
+    return std::async(std::launch::async, [pathString = path.ToString()]() -> Domain::Expected<void> {
+        std::wstring wPath = WinPathHelper::NormalizeAndResolvePath(pathString);
+        if (wPath.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path"});
+        }
+
+        if (!CreateDirectoryW(wPath.c_str(), NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_ALREADY_EXISTS) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::AlreadyExists, "Directory already exists", static_cast<int>(err)});
+            }
+            if (err == ERROR_PATH_NOT_FOUND) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::NotFound, "Path not found", static_cast<int>(err)});
+            }
+            if (err == ERROR_ACCESS_DENIED) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::AccessDenied, "Access denied", static_cast<int>(err)});
+            }
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Failed to create directory", static_cast<int>(err)});
+        }
+
+        return {};
+    });
+}
+
+std::future<Domain::Expected<void>> WinFileSystemProvider::CreateEmptyFile(const Domain::Path& path) {
+    return std::async(std::launch::async, [pathString = path.ToString()]() -> Domain::Expected<void> {
+        std::wstring wPath = WinPathHelper::NormalizeAndResolvePath(pathString);
+        if (wPath.empty()) {
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::InvalidFormat, "Empty path"});
+        }
+
+        HANDLE hFile = CreateFileW(wPath.c_str(), 
+                                   GENERIC_WRITE, 
+                                   0, 
+                                   NULL, 
+                                   CREATE_NEW, 
+                                   FILE_ATTRIBUTE_NORMAL, 
+                                   NULL);
+
+        if (hFile == INVALID_HANDLE_VALUE) {
+            DWORD err = GetLastError();
+            if (err == ERROR_FILE_EXISTS) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::AlreadyExists, "File already exists", static_cast<int>(err)});
+            }
+            if (err == ERROR_PATH_NOT_FOUND) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::NotFound, "Path not found", static_cast<int>(err)});
+            }
+            if (err == ERROR_ACCESS_DENIED) {
+                return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::AccessDenied, "Access denied", static_cast<int>(err)});
+            }
+            return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Failed to create file", static_cast<int>(err)});
+        }
+
+        CloseHandle(hFile);
+        return {};
+    });
+}
+
 } // namespace ExplorerX::Platform
