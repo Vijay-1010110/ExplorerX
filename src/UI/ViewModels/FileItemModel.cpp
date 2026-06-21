@@ -1,6 +1,8 @@
 #include "FileItemModel.h"
 #include <thread>
 #include <spdlog/spdlog.h>
+#include <QApplication>
+#include <QStyle>
 
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -80,7 +82,7 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
             QPersistentModelIndex pIndex(index);
             
             std::thread([this, pIndex, orchestrator = m_thumbOrchestrator, path = file.ItemPath, pathStr]() {
-                auto future = orchestrator->GetThumbnailAsync(path, 32);
+                auto future = orchestrator->GetThumbnailAsync(path, 96);
                 auto result = future.get();
                 if (result) {
                     auto thumbnail = result.value();
@@ -110,7 +112,7 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
         }
         
         // Return a generic fallback while loading or if it failed
-        return file.IsDirectory ? QIcon::fromTheme("folder") : QIcon::fromTheme("text-x-generic");
+        return QApplication::style()->standardIcon(file.IsDirectory ? QStyle::SP_DirIcon : QStyle::SP_FileIcon);
     }
 
     return {};

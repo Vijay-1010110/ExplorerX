@@ -106,8 +106,19 @@ void MainWindow::onSearchTriggered() {
     m_searchBox->setEnabled(false);
     
     if (m_searchEngine && m_fileGrid) {
-        std::thread([this, queryStr = query.toStdString()]() {
-            ExplorerX::Domain::SearchQuery searchQ{queryStr, ExplorerX::Domain::Path("C:\\")};
+        QString searchPath = "C:\\";
+        if (m_navTree && m_navTree->selectionModel()) {
+            QModelIndex currentIndex = m_navTree->selectionModel()->currentIndex();
+            if (currentIndex.isValid()) {
+                auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
+                if (dirModel) {
+                    searchPath = dirModel->filePath(currentIndex);
+                }
+            }
+        }
+        
+        std::thread([this, queryStr = query.toStdString(), pathStr = searchPath.toStdString()]() {
+            ExplorerX::Domain::SearchQuery searchQ{queryStr, ExplorerX::Domain::Path(pathStr)};
             auto future = m_searchEngine->Query(searchQ);
             auto result = future.get();
             
