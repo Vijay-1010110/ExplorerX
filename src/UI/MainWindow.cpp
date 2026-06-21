@@ -530,15 +530,133 @@ void MainWindow::setupActions() {
     addAction(deleteAction);
 }
 
-void MainWindow::onCopy() { spdlog::info("Copy action triggered"); }
-void MainWindow::onPaste() { spdlog::info("Paste action triggered"); }
-void MainWindow::onCut() { spdlog::info("Cut action triggered"); }
-void MainWindow::onDelete() { spdlog::info("Delete action triggered"); }
+void MainWindow::onCopy() { 
+    auto index = m_fileGrid->selectionModel()->currentIndex();
+    if (!index.isValid()) return;
+    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    if (fileModel) {
+        m_clipboardPath = fileModel->filePath(index);
+        m_clipboardIsCut = false;
+        spdlog::info("Copied: {}", m_clipboardPath.toStdString());
+    }
+}
 
-void MainWindow::onRename() { spdlog::info("Rename action triggered"); }
+void MainWindow::onCut() { 
+    auto index = m_fileGrid->selectionModel()->currentIndex();
+    if (!index.isValid()) return;
+    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    if (fileModel) {
+        m_clipboardPath = fileModel->filePath(index);
+        m_clipboardIsCut = true;
+        spdlog::info("Cut: {}", m_clipboardPath.toStdString());
+    }
+}
+
+void MainWindow::onPaste() { 
+    if (m_clipboardPath.isEmpty() || m_currentPath.isEmpty()) return;
+    
+    std::filesystem::path srcPath(m_clipboardPath.toStdString());
+    std::filesystem::path destPath = std::filesystem::path(m_currentPath.toStdString()) / srcPath.filename();
+    
+    spdlog::info("Pasting {} to {}", srcPath.string(), destPath.string());
+    
+    std::thread([this, srcPath, destPath, isCut = m_clipboardIsCut]() {
+        if (isCut) {
+            ExplorerX::Domain::MoveRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string())};
+            m_provider->Move(req);
+        } else {
+            ExplorerX::Domain::CopyRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string()), false};
+            m_provider->Copy(req);
+        }
+        
+        QMetaObject::invokeMethod(this, [this, isCut]() {
+            if (isCut) {
+                m_clipboardPath.clear();
+                m_clipboardIsCut = false;
+            }
+            onRefreshClicked();
+        });
+    }).detach();
+}
+
+void MainWindow::onDelete() { 
+    auto index = m_fileGrid->selectionModel()->currentIndex();
+    if (!index.isValid()) return;
+    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    if (fileModel) {
+        QString path = fileModel->filePath(index);
+        spdlog::info("Deleting: {}", path.toStdString());
+        
+        std::thread([this, pathStr = path.toStdString()]() {
+            ExplorerX::Domain::DeleteRequest req{ExplorerX::Domain::Path(pathStr), false};
+            m_provider->Delete(req);
+            
+            QMetaObject::invokeMethod(this, [this]() {
+                onRefreshClicked();
+            });
+        }).detach();
+    }
+}
+
+void MainWindow::onRename() { 
+    auto index = m_fileGrid->selectionModel()->currentIndex();
+    if (!index.isValid()) return;
+    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    if (fileModel) {
+        QString oldPathStr = fileModel->filePath(index);
+        std::filesystem::path oldPath(oldPathStr.toStdString());
+        
+        bool ok;
+        QString newName = QInputDialog::getText(this, "Rename", "New name:", QLineEdit::Normal, QString::fromStdString(oldPath.filename().string()), &ok);
+        if (ok && !newName.isEmpty()) {
+            std::filesystem::path newPath = oldPath.parent_path() / newName.toStdString();
+            spdlog::info("Renaming {} to {}", oldPath.string(), newPath.string());
+            
+            std::thread([this, oldPath, newPath]() {
+                ExplorerX::Domain::MoveRequest req{ExplorerX::Domain::Path(oldPath.string()), ExplorerX::Domain::Path(newPath.string())};
+                m_provider->Move(req);
+                
+                QMetaObject::invokeMethod(this, [this]() {
+                    onRefreshClicked();
+                });
+            }).detach();
+        }
+    }
+}
+
 void MainWindow::onShare() { spdlog::info("Share action triggered"); }
-void MainWindow::onNewFolder() { spdlog::info("New Folder action triggered"); }
-void MainWindow::onNewFile() { spdlog::info("New File action triggered"); }
+
+void MainWindow::onNewFolder() { 
+    bool ok;
+    QString name = QInputDialog::getText(this, "New Folder", "Folder name:", QLineEdit::Normal, "New Folder", &ok);
+    if (ok && !name.isEmpty() && !m_currentPath.isEmpty()) {
+        std::filesystem::path newPath = std::filesystem::path(m_currentPath.toStdString()) / name.toStdString();
+        spdlog::info("Creating folder: {}", newPath.string());
+        
+        std::thread([this, newPath]() {
+            m_provider->CreateFolder(ExplorerX::Domain::Path(newPath.string()));
+            QMetaObject::invokeMethod(this, [this]() {
+                onRefreshClicked();
+            });
+        }).detach();
+    }
+}
+
+void MainWindow::onNewFile() { 
+    bool ok;
+    QString name = QInputDialog::getText(this, "New File", "File name:", QLineEdit::Normal, "New File.txt", &ok);
+    if (ok && !name.isEmpty() && !m_currentPath.isEmpty()) {
+        std::filesystem::path newPath = std::filesystem::path(m_currentPath.toStdString()) / name.toStdString();
+        spdlog::info("Creating file: {}", newPath.string());
+        
+        std::thread([this, newPath]() {
+            m_provider->CreateEmptyFile(ExplorerX::Domain::Path(newPath.string()));
+            QMetaObject::invokeMethod(this, [this]() {
+                onRefreshClicked();
+            });
+        }).detach();
+    }
+}
 
 void MainWindow::onSortChanged(int index) {
     const char* sorts[] = {"Name", "Size", "Type"};

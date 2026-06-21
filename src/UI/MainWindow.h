@@ -4,6 +4,7 @@
 #include <memory>
 #include "../Domain/IFileSystemProvider.h"
 #include "../Domain/ISearchEngine.h"
+#include <QInputDialog>
 
 #include "../Core/ThumbnailOrchestrator.h"
 #include "../Core/AIIntentOrchestrator.h"
@@ -64,6 +65,9 @@ private:
     QList<QString> m_history;
     int m_historyIndex = -1;
     QString m_currentPath;
+    
+    QString m_clipboardPath;
+    bool m_clipboardIsCut = false;
     
     QLineEdit* m_searchBox = nullptr;
     QLineEdit* m_aiCommandBox = nullptr;
