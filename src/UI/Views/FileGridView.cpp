@@ -35,3 +35,9 @@ void FileGridView::performSearch(const QString& query) {
         m_model->performSearch(query);
     }
 }
+
+void FileGridView::loadPath(const QString& path) {
+    if (m_model) {
+        m_model->loadPath(path.toStdString());
+    }
+}

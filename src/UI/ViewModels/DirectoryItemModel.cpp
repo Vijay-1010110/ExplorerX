@@ -12,31 +12,85 @@ DirectoryItemModel::~DirectoryItemModel() = default;
 void DirectoryItemModel::loadPath(const std::string& path) {
     if (!m_provider) return;
     
-    std::thread([this, provider = m_provider, path]() {
+    beginResetModel();
+    m_rootNode = std::make_unique<RealDirNode>(QStringLiteral("Root"), QString::fromStdString(path));
+    m_rootNode->hasFetchedChildren = false;
+    m_rootNode->isFetching = false;
+    endResetModel();
+    
+    fetchMore(QModelIndex());
+}
+
+bool DirectoryItemModel::hasChildren(const QModelIndex &parent) const {
+    if (parent.column() > 0) return false;
+    RealDirNode *parentNode = parent.isValid() ? static_cast<RealDirNode*>(parent.internalPointer()) : m_rootNode.get();
+    if (!parentNode->hasFetchedChildren) return true; // Assume true until fetched
+    return !parentNode->children.empty();
+}
+
+bool DirectoryItemModel::canFetchMore(const QModelIndex &parent) const {
+    RealDirNode *parentNode = parent.isValid() ? static_cast<RealDirNode*>(parent.internalPointer()) : m_rootNode.get();
+    return !parentNode->hasFetchedChildren && !parentNode->isFetching;
+}
+
+void DirectoryItemModel::fetchMore(const QModelIndex &parent) {
+    RealDirNode *parentNode = parent.isValid() ? static_cast<RealDirNode*>(parent.internalPointer()) : m_rootNode.get();
+    if (parentNode->hasFetchedChildren || parentNode->isFetching) return;
+    
+    parentNode->isFetching = true;
+    std::string path = parentNode->fullPath.toStdString();
+    
+    QPersistentModelIndex persistentParent(parent);
+    
+    std::thread([this, persistentParent, provider = m_provider, path]() {
         auto future = provider->Enumerate(ExplorerX::Domain::Path(path));
         auto result = future.get();
         if (result) {
             auto items = result.value().Items;
-            QMetaObject::invokeMethod(this, [this, path, items = std::move(items)]() mutable {
-                beginResetModel();
-                m_rootNode->children.clear();
+            QMetaObject::invokeMethod(this, [this, persistentParent, items = std::move(items)]() mutable {
+                RealDirNode *node = nullptr;
+                if (persistentParent.isValid()) {
+                    node = static_cast<RealDirNode*>(persistentParent.internalPointer());
+                } else {
+                    node = m_rootNode.get();
+                }
+                
+                std::vector<ExplorerX::Domain::FileItem> dirs;
                 for (const auto& item : items) {
-                    if (item.IsDirectory) {
-                        m_rootNode->children.push_back(
+                    if (item.IsDirectory) dirs.push_back(item);
+                }
+                
+                if (!dirs.empty()) {
+                    beginInsertRows(persistentParent, 0, dirs.size() - 1);
+                    for (const auto& dir : dirs) {
+                        node->children.push_back(
                             std::make_unique<RealDirNode>(
-                                QString::fromStdString(item.Name), 
-                                QString::fromStdString(item.ItemPath.ToString()), 
-                                m_rootNode.get()
+                                QString::fromStdString(dir.Name), 
+                                QString::fromStdString(dir.ItemPath.ToString()), 
+                                node
                             )
                         );
                     }
+                    endInsertRows();
                 }
-                endResetModel();
+                node->hasFetchedChildren = true;
+                node->isFetching = false;
             });
         } else {
-            spdlog::error("DirectoryItemModel failed to load path: {}", path);
+            spdlog::error("DirectoryItemModel failed to fetch path: {}", path);
+            QMetaObject::invokeMethod(this, [this, persistentParent]() {
+                RealDirNode *node = persistentParent.isValid() ? static_cast<RealDirNode*>(persistentParent.internalPointer()) : m_rootNode.get();
+                node->hasFetchedChildren = true;
+                node->isFetching = false;
+            });
         }
     }).detach();
+}
+
+QString DirectoryItemModel::filePath(const QModelIndex& index) const {
+    if (!index.isValid()) return {};
+    auto *node = static_cast<RealDirNode*>(index.internalPointer());
+    return node->fullPath;
 }
 
 QModelIndex DirectoryItemModel::index(int row, int column, const QModelIndex &parent) const {

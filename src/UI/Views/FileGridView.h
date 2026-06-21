@@ -15,6 +15,7 @@ public:
                           QWidget *parent = nullptr);
     ~FileGridView() override;
 
+    void loadPath(const QString& path);
     void performSearch(const QString& query);
 
 private:

@@ -4,6 +4,7 @@
 #include <QLineEdit>
 #include "Views/DirectoryTreeView.h"
 #include "Views/FileGridView.h"
+#include "ViewModels/DirectoryItemModel.h"
 #include <QKeySequence>
 #include <spdlog/spdlog.h>
 
@@ -41,10 +42,25 @@ void MainWindow::setupUi() {
     m_fileGrid = new FileGridView(m_provider, m_searchEngine, mainSplitter);
     mainSplitter->addWidget(m_fileGrid);
 
+    // Wire navigation tree clicks to the file grid
+    connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
+
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
 
     setCentralWidget(mainSplitter);
+}
+
+void MainWindow::onDirectorySelected(const QModelIndex& index) {
+    if (!index.isValid()) return;
+    auto* model = qobject_cast<DirectoryItemModel*>(m_navTree->model());
+    if (model) {
+        QString path = model->filePath(index);
+        spdlog::info("Directory selected: {}", path.toStdString());
+        if (m_fileGrid) {
+            m_fileGrid->loadPath(path);
+        }
+    }
 }
 
 void MainWindow::onSearchTriggered() {
