@@ -247,7 +247,6 @@ void MainWindow::onSearchTriggered() {
     
     spdlog::info("Search triggered for: {}", query.toStdString());
     m_aiStatusLabel->setText("Searching...");
-    m_searchBox->setEnabled(false);
     
     if (m_searchEngine && m_fileGrid) {
         QString searchPath = m_currentPath.isEmpty() ? "C:\\" : m_currentPath;
@@ -262,7 +261,6 @@ void MainWindow::onSearchTriggered() {
             auto result = future.get();
             
             QMetaObject::invokeMethod(this, [this, result]() mutable {
-                m_searchBox->setEnabled(true);
                 if (result) {
                     m_fileGrid->setLocalFilter(""); // ONLY clear it if deep search succeeds
                     m_fileGrid->setSearchResults(std::move(result.value().Matches));
