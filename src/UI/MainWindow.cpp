@@ -16,6 +16,10 @@
 #include <QToolButton>
 #include <QDir>
 #include <QFileInfo>
+#include <QStackedWidget>
+#include <QFrame>
+#include <QApplication>
+#include <QStyle>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -65,10 +69,40 @@ void MainWindow::setupUi() {
     topLayout->addWidget(m_btnUp);
     topLayout->addWidget(m_btnRefresh);
     
-    // Address Bar
-    m_addressBar = new QLineEdit(topBar);
-    m_addressBar->setPlaceholderText("Address...");
-    topLayout->addWidget(m_addressBar, 1);
+    // Address Bar Stack
+    m_addressStack = new QStackedWidget(topBar);
+    m_addressStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    
+    // 1. Breadcrumbs Container
+    QFrame* breadcrumbsFrame = new QFrame(m_addressStack);
+    breadcrumbsFrame->setStyleSheet("QFrame { background-color: #FFFFFF; border: 1px solid #CCCCCC; border-radius: 4px; }");
+    m_breadcrumbsLayout = new QHBoxLayout(breadcrumbsFrame);
+    m_breadcrumbsLayout->setContentsMargins(2, 2, 2, 2);
+    m_breadcrumbsLayout->setSpacing(0);
+    
+    m_breadcrumbsContainer = new QWidget(breadcrumbsFrame);
+    QHBoxLayout* innerCrumbLayout = new QHBoxLayout(m_breadcrumbsContainer);
+    innerCrumbLayout->setContentsMargins(0, 0, 0, 0);
+    innerCrumbLayout->setSpacing(2);
+    m_breadcrumbsLayout->addWidget(m_breadcrumbsContainer);
+    
+    m_breadcrumbsLayout->addStretch(1); // Push breadcrumbs to the left
+    
+    m_btnEditAddress = new QToolButton(breadcrumbsFrame);
+    m_btnEditAddress->setIcon(QApplication::style()->standardIcon(QStyle::SP_DialogOpenButton)); // Or just text
+    m_btnEditAddress->setText("Edit");
+    m_btnEditAddress->setCursor(Qt::PointingHandCursor);
+    m_btnEditAddress->setStyleSheet("QToolButton { border: none; padding: 2px; } QToolButton:hover { background-color: #E0E0E0; }");
+    m_breadcrumbsLayout->addWidget(m_btnEditAddress);
+    
+    m_addressStack->addWidget(breadcrumbsFrame);
+    
+    // 2. Line Edit
+    m_addressEdit = new QLineEdit(m_addressStack);
+    m_addressEdit->setStyleSheet("QLineEdit { padding: 4px; border: 1px solid #0078D7; border-radius: 4px; }");
+    m_addressStack->addWidget(m_addressEdit);
+    
+    topLayout->addWidget(m_addressStack, 1);
     
     // AI Command Box (Distinct styling)
     m_aiCommandBox = new QLineEdit(topBar);
@@ -107,7 +141,8 @@ void MainWindow::setupUi() {
     connect(m_btnForward, &QToolButton::clicked, this, &MainWindow::onForwardClicked);
     connect(m_btnUp, &QToolButton::clicked, this, &MainWindow::onUpClicked);
     connect(m_btnRefresh, &QToolButton::clicked, this, &MainWindow::onRefreshClicked);
-    connect(m_addressBar, &QLineEdit::returnPressed, this, &MainWindow::onAddressBarReturnPressed);
+    connect(m_addressEdit, &QLineEdit::returnPressed, this, &MainWindow::onAddressBarReturnPressed);
+    connect(m_btnEditAddress, &QToolButton::clicked, [this]() { setAddressEditMode(true); });
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
@@ -216,9 +251,9 @@ void MainWindow::navigateTo(const QString& path, bool recordHistory) {
     
     // Update state
     m_currentPath = QDir::toNativeSeparators(path);
-    if (m_addressBar) {
-        m_addressBar->setText(m_currentPath);
-    }
+    m_addressEdit->setText(m_currentPath);
+    updateBreadcrumbs();
+    setAddressEditMode(false);
     
     if (recordHistory) {
         // Truncate forward history
@@ -307,10 +342,83 @@ void MainWindow::onRefreshClicked() {
 }
 
 void MainWindow::onAddressBarReturnPressed() {
-    if (!m_addressBar) return;
-    QString path = m_addressBar->text();
+    if (!m_addressEdit) return;
+    QString path = m_addressEdit->text();
     if (!path.isEmpty()) {
         navigateTo(path, true);
+    }
+}
+
+void MainWindow::setAddressEditMode(bool editMode) {
+    if (!m_addressStack) return;
+    if (editMode) {
+        m_addressStack->setCurrentWidget(m_addressEdit);
+        m_addressEdit->setFocus();
+        m_addressEdit->selectAll();
+    } else {
+        m_addressStack->setCurrentWidget(m_addressStack->widget(0)); // The frame
+    }
+}
+
+void MainWindow::updateBreadcrumbs() {
+    if (!m_breadcrumbsContainer) return;
+    
+    // Clear existing
+    QLayout* layout = m_breadcrumbsContainer->layout();
+    if (layout) {
+        QLayoutItem* item;
+        while ((item = layout->takeAt(0)) != nullptr) {
+            delete item->widget();
+            delete item;
+        }
+    } else {
+        layout = new QHBoxLayout(m_breadcrumbsContainer);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(2);
+    }
+    
+    // Split path into parts
+    QString normalizedPath = QDir::fromNativeSeparators(m_currentPath);
+    QStringList parts = normalizedPath.split('/', Qt::SkipEmptyParts);
+    
+    if (parts.isEmpty()) return;
+    
+    QString builtPath = "";
+    
+    for (int i = 0; i < parts.size(); ++i) {
+        QString part = parts[i];
+        
+        // Build the absolute path up to this part
+        if (i == 0 && part.endsWith(":")) {
+            // Drive letter
+            builtPath = part + "\\";
+        } else {
+            if (!builtPath.endsWith("\\") && !builtPath.endsWith("/")) {
+                builtPath += "\\";
+            }
+            builtPath += part;
+        }
+        
+        QToolButton* btn = new QToolButton(m_breadcrumbsContainer);
+        btn->setText(part);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setStyleSheet("QToolButton { border: none; padding: 4px; font-weight: bold; color: #333333; } QToolButton:hover { background-color: #E0E0E0; border-radius: 2px; }");
+        
+        // Add a separator chevron if not the last item
+        if (i < parts.size() - 1) {
+            QLabel* sep = new QLabel(">", m_breadcrumbsContainer);
+            sep->setStyleSheet("color: #888888; margin: 0 2px;");
+            
+            layout->addWidget(btn);
+            layout->addWidget(sep);
+        } else {
+            layout->addWidget(btn);
+        }
+        
+        // Wire up the button
+        connect(btn, &QToolButton::clicked, this, [this, targetPath = builtPath]() {
+            navigateTo(targetPath, true);
+        });
     }
 }
 

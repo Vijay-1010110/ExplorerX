@@ -68,5 +68,14 @@ private:
     class QToolButton* m_btnForward = nullptr;
     class QToolButton* m_btnUp = nullptr;
     class QToolButton* m_btnRefresh = nullptr;
-    QLineEdit* m_addressBar = nullptr;
+    
+    // Breadcrumb Address Bar elements
+    class QStackedWidget* m_addressStack = nullptr;
+    QWidget* m_breadcrumbsContainer = nullptr;
+    class QHBoxLayout* m_breadcrumbsLayout = nullptr;
+    QLineEdit* m_addressEdit = nullptr;
+    class QToolButton* m_btnEditAddress = nullptr;
+    
+    void updateBreadcrumbs();
+    void setAddressEditMode(bool editMode);
 };
