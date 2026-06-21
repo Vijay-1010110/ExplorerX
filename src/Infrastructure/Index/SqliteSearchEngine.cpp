@@ -50,10 +50,13 @@ Domain::Expected<void> SqliteSearchEngine::InitializeDatabase() {
             name TEXT NOT NULL,
             size INTEGER NOT NULL,
             last_modified INTEGER NOT NULL,
-            parent_path TEXT NOT NULL
+            parent_path TEXT NOT NULL,
+            is_directory INTEGER NOT NULL DEFAULT 0
         );
     )";
     auto result = ExecSql(createFilesTable);
+    // Ignore error if column already exists
+    ExecSql("ALTER TABLE files ADD COLUMN is_directory INTEGER NOT NULL DEFAULT 0;");
     if (!result) return result;
 
     const char* createFtsTable = R"(
@@ -100,8 +103,8 @@ std::future<Domain::Expected<void>> SqliteSearchEngine::IndexDirectory(const Dom
         if (!execRes) return execRes;
 
         const char* insertSql = R"(
-            INSERT OR REPLACE INTO files (path, name, size, last_modified, parent_path)
-            VALUES (?, ?, ?, ?, ?);
+            INSERT OR REPLACE INTO files (path, name, size, last_modified, parent_path, is_directory)
+            VALUES (?, ?, ?, ?, ?, ?);
         )";
 
         sqlite3_stmt* stmt = nullptr;
@@ -114,7 +117,7 @@ std::future<Domain::Expected<void>> SqliteSearchEngine::IndexDirectory(const Dom
             // Using directory_options::skip_permission_denied to safely traverse
             auto options = std::filesystem::directory_options::skip_permission_denied;
             for (const auto& entry : std::filesystem::recursive_directory_iterator(rootStr, options)) {
-                if (!entry.is_regular_file()) continue;
+                if (!entry.is_regular_file() && !entry.is_directory()) continue;
 
                 std::string filePath = entry.path().string();
                 std::string name = entry.path().filename().string();
@@ -135,6 +138,7 @@ std::future<Domain::Expected<void>> SqliteSearchEngine::IndexDirectory(const Dom
                 sqlite3_bind_int64(stmt, 3, size);
                 sqlite3_bind_int64(stmt, 4, lastMod);
                 sqlite3_bind_text(stmt, 5, parentPath.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_int(stmt, 6, entry.is_directory() ? 1 : 0);
 
                 sqlite3_step(stmt);
             }
@@ -239,7 +243,7 @@ std::future<Domain::Expected<Domain::SearchResults>> SqliteSearchEngine::Query(c
             }
         }
 
-        std::string sql = "SELECT f.id, f.path, f.name, f.size, f.last_modified, f.parent_path FROM files f";
+        std::string sql = "SELECT f.id, f.path, f.name, f.size, f.last_modified, f.parent_path, f.is_directory FROM files f";
         if (!ftsMatch.empty()) {
             sql += " JOIN files_fts fts ON f.id = fts.rowid";
         }
@@ -273,6 +277,7 @@ std::future<Domain::Expected<Domain::SearchResults>> SqliteSearchEngine::Query(c
             item.ItemPath = Domain::Path(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
             item.Name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
             item.Size = sqlite3_column_int64(stmt, 3);
+            item.IsDirectory = sqlite3_column_int(stmt, 6) != 0;
             // Just fetching to show usage. Time points can be assigned here as well.
             results.Matches.push_back(item);
         }
