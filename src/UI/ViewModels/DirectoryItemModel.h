@@ -10,6 +10,8 @@ struct RealDirNode {
     QString fullPath;
     RealDirNode* parent = nullptr;
     std::vector<std::unique_ptr<RealDirNode>> children;
+    bool hasFetchedChildren = false;
+    bool isFetching = false;
 
     RealDirNode(const QString& n, const QString& p, RealDirNode* pParent = nullptr) 
         : name(n), fullPath(p), parent(pParent) {}
@@ -28,6 +30,10 @@ public:
     QModelIndex parent(const QModelIndex &index) const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    bool hasChildren(const QModelIndex &parent = QModelIndex()) const override;
+    bool canFetchMore(const QModelIndex &parent) const override;
+    void fetchMore(const QModelIndex &parent) override;
+    QString filePath(const QModelIndex& index) const;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;

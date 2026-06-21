@@ -23,6 +23,7 @@ private slots:
     void onCut();
     void onDelete();
     void onSearchTriggered();
+    void onDirectorySelected(const QModelIndex& index);
 
 private:
     void setupUi();
