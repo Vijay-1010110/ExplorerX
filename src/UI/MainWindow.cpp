@@ -265,6 +265,10 @@ void MainWindow::onSearchTriggered() {
         }
         
         std::thread([this, queryStr = query.toStdString(), pathStr = searchPath.toStdString()]() {
+            // Force index before deep search
+            auto indexFuture = m_searchEngine->IndexDirectory(ExplorerX::Domain::Path(pathStr));
+            indexFuture.get(); // Block this background thread until indexing finishes
+            
             ExplorerX::Domain::SearchQuery searchQ{queryStr, ExplorerX::Domain::Path(pathStr)};
             auto future = m_searchEngine->Query(searchQ);
             auto result = future.get();
@@ -334,6 +338,12 @@ void MainWindow::navigateTo(const QString& path, bool recordHistory) {
     m_addressEdit->setText(m_currentPath);
     updateBreadcrumbs();
     setAddressEditMode(false);
+    
+    if (m_searchEngine) {
+        std::thread([this, pathStr = m_currentPath.toStdString()]() {
+            m_searchEngine->IndexDirectory(ExplorerX::Domain::Path(pathStr));
+        }).detach();
+    }
     
     if (recordHistory) {
         // Truncate forward history
