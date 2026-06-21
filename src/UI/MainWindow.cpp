@@ -99,9 +99,28 @@ void MainWindow::onDirectorySelected(const QModelIndex& index) {
 
 void MainWindow::onSearchTriggered() {
     QString query = m_searchBox->text();
+    if (query.isEmpty()) return;
+    
     spdlog::info("Search triggered for: {}", query.toStdString());
-    if (m_fileGrid) {
-        m_fileGrid->performSearch(query);
+    m_aiStatusLabel->setText("Searching...");
+    m_searchBox->setEnabled(false);
+    
+    if (m_searchEngine && m_fileGrid) {
+        std::thread([this, queryStr = query.toStdString()]() {
+            ExplorerX::Domain::SearchQuery searchQ{queryStr, ExplorerX::Domain::Path("C:\\")};
+            auto future = m_searchEngine->Query(searchQ);
+            auto result = future.get();
+            
+            QMetaObject::invokeMethod(this, [this, result]() mutable {
+                m_searchBox->setEnabled(true);
+                if (result) {
+                    m_fileGrid->setSearchResults(std::move(result.value().Matches));
+                    m_aiStatusLabel->setText("Search complete.");
+                } else {
+                    m_aiStatusLabel->setText("Search failed.");
+                }
+            });
+        }).detach();
     }
 }
 

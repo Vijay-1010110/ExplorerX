@@ -1,5 +1,5 @@
 #pragma once
-#include <QTableView>
+#include <QListView>
 
 #include <memory>
 #include "../Domain/IFileSystemProvider.h"
@@ -8,7 +8,7 @@
 
 class FileItemModel;
 
-class FileGridView : public QTableView {
+class FileGridView : public QListView {
     Q_OBJECT
 public:
     explicit FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
@@ -18,7 +18,7 @@ public:
     ~FileGridView() override;
 
     void loadPath(const QString& path);
-    void performSearch(const QString& query);
+    void setSearchResults(std::vector<ExplorerX::Domain::FileItem> results);
 
 private:
     void setupRealModel();
