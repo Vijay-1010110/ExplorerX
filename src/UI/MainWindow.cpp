@@ -13,6 +13,9 @@
 #include <QKeySequence>
 #include <spdlog/spdlog.h>
 #include <thread>
+#include <QToolButton>
+#include <QDir>
+#include <QFileInfo>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -41,6 +44,32 @@ void MainWindow::setupUi() {
     QHBoxLayout* topLayout = new QHBoxLayout(topBar);
     topLayout->setContentsMargins(5, 5, 5, 5);
     
+    // Navigation Buttons
+    m_btnBack = new QToolButton(topBar);
+    m_btnBack->setText("<-");
+    m_btnBack->setEnabled(false);
+    
+    m_btnForward = new QToolButton(topBar);
+    m_btnForward->setText("->");
+    m_btnForward->setEnabled(false);
+    
+    m_btnUp = new QToolButton(topBar);
+    m_btnUp->setText("^");
+    m_btnUp->setEnabled(false);
+    
+    m_btnRefresh = new QToolButton(topBar);
+    m_btnRefresh->setText("R");
+    
+    topLayout->addWidget(m_btnBack);
+    topLayout->addWidget(m_btnForward);
+    topLayout->addWidget(m_btnUp);
+    topLayout->addWidget(m_btnRefresh);
+    
+    // Address Bar
+    m_addressBar = new QLineEdit(topBar);
+    m_addressBar->setPlaceholderText("Address...");
+    topLayout->addWidget(m_addressBar, 1);
+    
     // AI Command Box (Distinct styling)
     m_aiCommandBox = new QLineEdit(topBar);
     m_aiCommandBox->setPlaceholderText("Ask the AI to do something...");
@@ -50,7 +79,7 @@ void MainWindow::setupUi() {
     // Search Box
     m_searchBox = new QLineEdit(topBar);
     m_searchBox->setPlaceholderText("Search...");
-    m_searchBox->setMaximumWidth(300);
+    m_searchBox->setMaximumWidth(200);
     topLayout->addWidget(m_searchBox, 0);
 
     mainLayout->addWidget(topBar);
@@ -72,6 +101,13 @@ void MainWindow::setupUi() {
     connect(m_aiCommandBox, &QLineEdit::returnPressed, this, &MainWindow::onAICommandTriggered);
     connect(m_fileGrid, &FileGridView::doubleClicked, this, &MainWindow::onFileGridDoubleClicked);
     connect(m_navTree->model(), &QAbstractItemModel::rowsInserted, this, &MainWindow::onTreeRowsInserted);
+    
+    // Wire navigation bar
+    connect(m_btnBack, &QToolButton::clicked, this, &MainWindow::onBackClicked);
+    connect(m_btnForward, &QToolButton::clicked, this, &MainWindow::onForwardClicked);
+    connect(m_btnUp, &QToolButton::clicked, this, &MainWindow::onUpClicked);
+    connect(m_btnRefresh, &QToolButton::clicked, this, &MainWindow::onRefreshClicked);
+    connect(m_addressBar, &QLineEdit::returnPressed, this, &MainWindow::onAddressBarReturnPressed);
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
@@ -90,9 +126,8 @@ void MainWindow::onDirectorySelected(const QModelIndex& index) {
     auto* model = qobject_cast<DirectoryItemModel*>(m_navTree->model());
     if (model) {
         QString path = model->filePath(index);
-        spdlog::info("Directory selected: {}", path.toStdString());
-        if (m_fileGrid) {
-            m_fileGrid->loadPath(path);
+        if (path != m_currentPath) {
+            navigateTo(path, true);
         }
     }
 }
@@ -170,27 +205,65 @@ void MainWindow::onFileGridDoubleClicked(const QModelIndex& index) {
     auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
     if (fileModel && fileModel->isDirectory(index)) {
         QString path = fileModel->filePath(index);
-        m_fileGrid->loadPath(path);
+        navigateTo(path, true);
+    }
+}
+
+void MainWindow::navigateTo(const QString& path, bool recordHistory) {
+    if (path.isEmpty()) return;
+    
+    spdlog::info("Navigating to: {}", path.toStdString());
+    
+    // Update state
+    m_currentPath = QDir::toNativeSeparators(path);
+    if (m_addressBar) {
+        m_addressBar->setText(m_currentPath);
+    }
+    
+    if (recordHistory) {
+        // Truncate forward history
+        if (m_historyIndex < m_history.size() - 1) {
+            m_history.erase(m_history.begin() + m_historyIndex + 1, m_history.end());
+        }
         
-        auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
-        if (!dirModel) return;
-        
-        m_pendingSyncPath = path;
-        
+        // Push to history
+        if (m_history.isEmpty() || m_history.last() != m_currentPath) {
+            m_history.append(m_currentPath);
+            m_historyIndex = m_history.size() - 1;
+        }
+    }
+    
+    // Update button states
+    if (m_btnBack) m_btnBack->setEnabled(m_historyIndex > 0);
+    if (m_btnForward) m_btnForward->setEnabled(m_historyIndex < m_history.size() - 1);
+    
+    // Disable Up button if at root
+    if (m_btnUp) {
+        QDir dir(m_currentPath);
+        m_btnUp->setEnabled(dir.cdUp());
+    }
+    
+    // Load path in views
+    if (m_fileGrid) {
+        m_fileGrid->loadPath(m_currentPath);
+    }
+    
+    // Sync tree view selection
+    m_pendingSyncPath = m_currentPath;
+    auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
+    if (dirModel) {
         QModelIndex currentTreeIndex = m_navTree->selectionModel()->currentIndex();
         if (!currentTreeIndex.isValid()) {
             currentTreeIndex = dirModel->index(0, 0, QModelIndex()); 
         }
         
-        // Expand to trigger children fetch if not already fetched
         m_navTree->expand(currentTreeIndex);
         
-        // Check if children are already loaded
         bool found = false;
         int rows = dirModel->rowCount(currentTreeIndex);
         for (int i = 0; i < rows; ++i) {
             QModelIndex child = dirModel->index(i, 0, currentTreeIndex);
-            if (dirModel->filePath(child) == path) {
+            if (dirModel->filePath(child) == m_currentPath) {
                 m_navTree->selectionModel()->setCurrentIndex(child, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
                 m_navTree->scrollTo(child);
                 m_navTree->expand(child);
@@ -200,10 +273,44 @@ void MainWindow::onFileGridDoubleClicked(const QModelIndex& index) {
             }
         }
         
-        // If not found and can fetch more, fetch more
         if (!found && dirModel->canFetchMore(currentTreeIndex)) {
             dirModel->fetchMore(currentTreeIndex);
         }
+    }
+}
+
+void MainWindow::onBackClicked() {
+    if (m_historyIndex > 0) {
+        m_historyIndex--;
+        navigateTo(m_history[m_historyIndex], false);
+    }
+}
+
+void MainWindow::onForwardClicked() {
+    if (m_historyIndex < m_history.size() - 1) {
+        m_historyIndex++;
+        navigateTo(m_history[m_historyIndex], false);
+    }
+}
+
+void MainWindow::onUpClicked() {
+    QDir dir(m_currentPath);
+    if (dir.cdUp()) {
+        navigateTo(dir.absolutePath(), true);
+    }
+}
+
+void MainWindow::onRefreshClicked() {
+    if (!m_currentPath.isEmpty()) {
+        navigateTo(m_currentPath, false);
+    }
+}
+
+void MainWindow::onAddressBarReturnPressed() {
+    if (!m_addressBar) return;
+    QString path = m_addressBar->text();
+    if (!path.isEmpty()) {
+        navigateTo(path, true);
     }
 }
 
