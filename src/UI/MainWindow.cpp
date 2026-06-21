@@ -9,6 +9,7 @@
 #include "Views/DirectoryTreeView.h"
 #include "Views/FileGridView.h"
 #include "ViewModels/DirectoryItemModel.h"
+#include "ViewModels/FileItemModel.h"
 #include <QKeySequence>
 #include <spdlog/spdlog.h>
 #include <thread>
@@ -69,6 +70,8 @@ void MainWindow::setupUi() {
     connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
     connect(m_searchBox, &QLineEdit::returnPressed, this, &MainWindow::onSearchTriggered);
     connect(m_aiCommandBox, &QLineEdit::returnPressed, this, &MainWindow::onAICommandTriggered);
+    connect(m_fileGrid, &FileGridView::doubleClicked, this, &MainWindow::onFileGridDoubleClicked);
+    connect(m_navTree->model(), &QAbstractItemModel::rowsInserted, this, &MainWindow::onTreeRowsInserted);
 
     // Initial sizes for splitter (e.g., 25% vs 75%)
     mainSplitter->setSizes({250, 750});
@@ -128,6 +131,67 @@ void MainWindow::onAICommandTriggered() {
                 }
             });
         }).detach();
+    }
+}
+
+void MainWindow::onFileGridDoubleClicked(const QModelIndex& index) {
+    if (!index.isValid()) return;
+    
+    auto* fileModel = qobject_cast<FileItemModel*>(m_fileGrid->model());
+    if (fileModel && fileModel->isDirectory(index)) {
+        QString path = fileModel->filePath(index);
+        m_fileGrid->loadPath(path);
+        
+        auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
+        if (!dirModel) return;
+        
+        m_pendingSyncPath = path;
+        
+        QModelIndex currentTreeIndex = m_navTree->selectionModel()->currentIndex();
+        if (!currentTreeIndex.isValid()) {
+            currentTreeIndex = dirModel->index(0, 0, QModelIndex()); 
+        }
+        
+        // Expand to trigger children fetch if not already fetched
+        m_navTree->expand(currentTreeIndex);
+        
+        // Check if children are already loaded
+        bool found = false;
+        int rows = dirModel->rowCount(currentTreeIndex);
+        for (int i = 0; i < rows; ++i) {
+            QModelIndex child = dirModel->index(i, 0, currentTreeIndex);
+            if (dirModel->filePath(child) == path) {
+                m_navTree->selectionModel()->setCurrentIndex(child, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                m_navTree->scrollTo(child);
+                m_navTree->expand(child);
+                m_pendingSyncPath.clear();
+                found = true;
+                break;
+            }
+        }
+        
+        // If not found and can fetch more, fetch more
+        if (!found && dirModel->canFetchMore(currentTreeIndex)) {
+            dirModel->fetchMore(currentTreeIndex);
+        }
+    }
+}
+
+void MainWindow::onTreeRowsInserted(const QModelIndex& parent, int first, int last) {
+    if (m_pendingSyncPath.isEmpty()) return;
+    
+    auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
+    if (!dirModel) return;
+    
+    for (int i = first; i <= last; ++i) {
+        QModelIndex child = dirModel->index(i, 0, parent);
+        if (dirModel->filePath(child) == m_pendingSyncPath) {
+            m_navTree->selectionModel()->setCurrentIndex(child, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            m_navTree->scrollTo(child);
+            m_navTree->expand(child);
+            m_pendingSyncPath.clear();
+            break;
+        }
     }
 }
 

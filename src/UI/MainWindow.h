@@ -31,6 +31,8 @@ private slots:
     void onSearchTriggered();
     void onDirectorySelected(const QModelIndex& index);
     void onAICommandTriggered();
+    void onFileGridDoubleClicked(const QModelIndex& index);
+    void onTreeRowsInserted(const QModelIndex& parent, int first, int last);
 
 private:
     void setupUi();
@@ -40,6 +42,8 @@ private:
     std::shared_ptr<ExplorerX::Domain::ISearchEngine> m_searchEngine;
     std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> m_thumbOrchestrator;
     std::shared_ptr<ExplorerX::Core::AIIntentOrchestrator> m_aiOrchestrator;
+    
+    QString m_pendingSyncPath;
     
     QLineEdit* m_searchBox = nullptr;
     QLineEdit* m_aiCommandBox = nullptr;
