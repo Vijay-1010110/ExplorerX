@@ -253,16 +253,7 @@ void MainWindow::onSearchTriggered() {
     m_searchBox->setEnabled(false);
     
     if (m_searchEngine && m_fileGrid) {
-        QString searchPath = "C:\\";
-        if (m_navTree && m_navTree->selectionModel()) {
-            QModelIndex currentIndex = m_navTree->selectionModel()->currentIndex();
-            if (currentIndex.isValid()) {
-                auto* dirModel = qobject_cast<DirectoryItemModel*>(m_navTree->model());
-                if (dirModel) {
-                    searchPath = dirModel->filePath(currentIndex);
-                }
-            }
-        }
+        QString searchPath = m_currentPath.isEmpty() ? "C:\\" : m_currentPath;
         
         std::thread([this, queryStr = query.toStdString(), pathStr = searchPath.toStdString()]() {
             // Force index before deep search
