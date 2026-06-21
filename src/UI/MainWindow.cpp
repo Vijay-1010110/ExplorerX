@@ -326,6 +326,16 @@ void MainWindow::navigateTo(const QString& path, bool recordHistory) {
     m_currentPath = QDir::toNativeSeparators(path);
     m_addressEdit->setText(m_currentPath);
     updateBreadcrumbs();
+    
+    if (m_searchBox) {
+        // Block signals so we don't trigger the textChanged slot during navigation
+        m_searchBox->blockSignals(true); 
+        m_searchBox->clear();
+        m_searchBox->blockSignals(false);
+    }
+    if (m_fileGrid) {
+        m_fileGrid->setLocalFilter(""); // Reset the grid view to unfiltered
+    }
     setAddressEditMode(false);
     
     if (m_searchEngine) {
