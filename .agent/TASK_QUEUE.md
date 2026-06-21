@@ -21,4 +21,4 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Phase 3.4:** Add interaction models (drag/drop, shortcuts).
 - [x] **Milestone 3:** SQLite index integration.
 - [x] **Milestone 6:** Thumbnail and Preview engine.
-- [/] **Milestone 10:** AI Command and Intent agent integration.
+- [x] **Milestone 10:** AI Command and Intent agent integration.

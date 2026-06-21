@@ -8,6 +8,7 @@
 
 #include "../Platform/WinThumbnailProvider.h"
 #include "../Core/ThumbnailOrchestrator.h"
+#include "../Core/AIIntentOrchestrator.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -20,11 +21,14 @@ int main(int argc, char *argv[]) {
     auto thumbProvider = std::make_shared<ExplorerX::Platform::WinThumbnailProvider>();
     auto thumbOrchestrator = std::make_shared<ExplorerX::Core::ThumbnailOrchestrator>(thumbProvider);
     
+    // AI Intent Orchestrator
+    auto aiOrchestrator = std::make_shared<ExplorerX::Core::AIIntentOrchestrator>(provider, searchEngine);
+    
     // Start indexer orchestration
     auto orchestrator = std::make_shared<ExplorerX::Core::IndexOrchestrator>(watcher, searchEngine);
     orchestrator->Start(ExplorerX::Domain::Path("C:\\"));
     
-    MainWindow window(provider, searchEngine, thumbOrchestrator);
+    MainWindow window(provider, searchEngine, thumbOrchestrator, aiOrchestrator);
     window.show();
     
     return app.exec();
