@@ -22,3 +22,7 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] **Milestone 3:** SQLite index integration.
 - [x] **Milestone 6:** Thumbnail and Preview engine.
 - [x] **Milestone 10:** AI Command and Intent agent integration.
+
+### Future Polish
+- Fix Windows default icon fallback in grid view
+- Scope search query to current directory
