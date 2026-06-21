@@ -21,7 +21,7 @@ public:
     ~FileItemModel() override;
 
     void loadPath(const std::string& path);
-    void performSearch(const QString& query);
+    void setSearchResults(std::vector<ExplorerX::Domain::FileItem> results);
 
     bool isDirectory(const QModelIndex& index) const;
     QString filePath(const QModelIndex& index) const;

@@ -40,25 +40,10 @@ QString FileItemModel::filePath(const QModelIndex& index) const {
     return QString::fromStdString(m_files[index.row()].ItemPath.ToString());
 }
 
-void FileItemModel::performSearch(const QString& query) {
-    if (!m_searchEngine) return;
-    std::string q = query.toStdString();
-    
-    std::thread([this, engine = m_searchEngine, q]() {
-        ExplorerX::Domain::SearchQuery searchQ{q, ExplorerX::Domain::Path("C:\\")};
-        auto future = engine->Query(searchQ);
-        auto result = future.get();
-        if (result) {
-            auto items = result.value().Matches;
-            QMetaObject::invokeMethod(this, [this, items = std::move(items)]() mutable {
-                beginResetModel();
-                m_files = std::move(items);
-                endResetModel();
-            });
-        } else {
-            spdlog::error("Failed to perform search: {}", q);
-        }
-    }).detach();
+void FileItemModel::setSearchResults(std::vector<ExplorerX::Domain::FileItem> results) {
+    beginResetModel();
+    m_files = std::move(results);
+    endResetModel();
 }
 
 int FileItemModel::rowCount(const QModelIndex &parent) const {
