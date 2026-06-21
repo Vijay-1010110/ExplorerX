@@ -58,8 +58,8 @@ static Domain::Expected<std::vector<uint8_t>> SaveWICBitmapToPNG(IWICImagingFact
     return result;
 }
 
-std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThumbnail(const Domain::Path& path, int size) {
-    return std::async(std::launch::async, [pathString = path.ToString(), size]() -> Domain::Expected<std::vector<uint8_t>> {
+std::future<Domain::Expected<Domain::ThumbnailImage>> WinThumbnailProvider::GetThumbnailAsync(const Domain::Path& path, int targetSize) {
+    return std::async(std::launch::async, [pathString = path.ToString(), targetSize]() -> Domain::Expected<Domain::ThumbnailImage> {
         HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
         bool coInit = SUCCEEDED(hr);
 
@@ -80,7 +80,8 @@ std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThu
             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Failed to create WIC factory", (int)hr});
         }
 
-        Domain::Expected<std::vector<uint8_t>> result = Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Unknown error", 0});
+        Domain::Expected<std::vector<uint8_t>> rawBytes = Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Unknown error", 0});
+        UINT actWidth = 0, actHeight = 0;
 
         IShellItem* pItem = NULL;
         hr = SHCreateItemFromParsingName(wPath.c_str(), NULL, IID_PPV_ARGS(&pItem));
@@ -89,13 +90,14 @@ std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThu
             hr = pItem->QueryInterface(IID_PPV_ARGS(&pImageFactory));
             if (SUCCEEDED(hr)) {
                 HBITMAP hBitmap = NULL;
-                SIZE sz = { size, size };
+                SIZE sz = { targetSize, targetSize };
                 hr = pImageFactory->GetImage(sz, SIIGBF_RESIZETOFIT, &hBitmap);
                 if (SUCCEEDED(hr)) {
                     IWICBitmap* pWicBitmap = NULL;
                     hr = pFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, &pWicBitmap);
                     if (SUCCEEDED(hr)) {
-                        result = SaveWICBitmapToPNG(pFactory, pWicBitmap);
+                        pWicBitmap->GetSize(&actWidth, &actHeight);
+                        rawBytes = SaveWICBitmapToPNG(pFactory, pWicBitmap);
                         pWicBitmap->Release();
                     }
                     DeleteObject(hBitmap);
@@ -105,7 +107,7 @@ std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThu
             pItem->Release();
         }
 
-        if (!result.has_value()) {
+        if (!rawBytes.has_value()) {
             SHFILEINFOW wInfo = {0};
             DWORD flags = SHGFI_ICON | SHGFI_LARGEICON;
             if (SHGetFileInfoW(wPath.c_str(), 0, &wInfo, sizeof(wInfo), flags)) {
@@ -113,7 +115,8 @@ std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThu
                     IWICBitmap* pWicBitmap = NULL;
                     hr = pFactory->CreateBitmapFromHICON(wInfo.hIcon, &pWicBitmap);
                     if (SUCCEEDED(hr)) {
-                        result = SaveWICBitmapToPNG(pFactory, pWicBitmap);
+                        pWicBitmap->GetSize(&actWidth, &actHeight);
+                        rawBytes = SaveWICBitmapToPNG(pFactory, pWicBitmap);
                         pWicBitmap->Release();
                     }
                     DestroyIcon(wInfo.hIcon);
@@ -124,11 +127,11 @@ std::future<Domain::Expected<std::vector<uint8_t>>> WinThumbnailProvider::GetThu
         pFactory->Release();
         cleanup();
         
-        if (!result.has_value() && result.error().Code == Domain::ErrorCode::Unknown) {
-             result = Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Failed to extract thumbnail or icon", 0});
+        if (!rawBytes.has_value()) {
+             return Domain::MakeUnexpected(Domain::Error{Domain::ErrorCode::Unknown, "Failed to extract thumbnail or icon", 0});
         }
 
-        return result;
+        return Domain::ThumbnailImage{rawBytes.value(), static_cast<int>(actWidth), static_cast<int>(actHeight)};
     });
 }
 

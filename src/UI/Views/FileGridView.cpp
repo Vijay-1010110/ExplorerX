@@ -4,8 +4,9 @@
 
 FileGridView::FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                            std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                           std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
                            QWidget *parent)
-    : QTableView(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
+    : QTableView(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)) {
     // UI Virtualization: Lock vertical header sizes to avoid recalculation
     verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     verticalHeader()->setDefaultSectionSize(24);
@@ -25,7 +26,7 @@ FileGridView::FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvide
 FileGridView::~FileGridView() = default;
 
 void FileGridView::setupRealModel() {
-    m_model = new FileItemModel(m_provider, m_searchEngine, this);
+    m_model = new FileItemModel(m_provider, m_searchEngine, m_thumbOrchestrator, this);
     setModel(m_model);
     m_model->loadPath("C:\\");
 }

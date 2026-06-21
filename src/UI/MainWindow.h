@@ -4,6 +4,8 @@
 #include "../Domain/IFileSystemProvider.h"
 #include "../Domain/ISearchEngine.h"
 
+#include "../Core/ThumbnailOrchestrator.h"
+
 class QLineEdit;
 class DirectoryTreeView;
 class FileGridView;
@@ -14,6 +16,7 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                         std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                        std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
                         QWidget *parent = nullptr);
     ~MainWindow() override;
 
@@ -31,6 +34,7 @@ private:
 
     std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> m_provider;
     std::shared_ptr<ExplorerX::Domain::ISearchEngine> m_searchEngine;
+    std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> m_thumbOrchestrator;
     
     QLineEdit* m_searchBox = nullptr;
     DirectoryTreeView* m_navTree = nullptr;

@@ -10,8 +10,9 @@
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
+                       std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
                        QWidget *parent)
-    : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)) {
+    : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)) {
     setupUi();
     setupActions();
 }
@@ -39,7 +40,7 @@ void MainWindow::setupUi() {
     mainSplitter->addWidget(m_navTree);
 
     // Right pane (file grid)
-    m_fileGrid = new FileGridView(m_provider, m_searchEngine, mainSplitter);
+    m_fileGrid = new FileGridView(m_provider, m_searchEngine, m_thumbOrchestrator, mainSplitter);
     mainSplitter->addWidget(m_fileGrid);
 
     // Wire navigation tree clicks to the file grid
