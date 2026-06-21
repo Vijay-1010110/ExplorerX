@@ -2,6 +2,7 @@
 #include <QMainWindow>
 #include <QList>
 #include <memory>
+#include <QFileSystemWatcher>
 #include "../Domain/IFileSystemProvider.h"
 #include "../Domain/ISearchEngine.h"
 #include <QInputDialog>
@@ -90,4 +91,6 @@ private:
     
     void updateBreadcrumbs();
     void setAddressEditMode(bool editMode);
+
+    QFileSystemWatcher* m_fileWatcher = nullptr;
 };

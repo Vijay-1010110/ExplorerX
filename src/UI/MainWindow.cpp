@@ -24,6 +24,10 @@
 #include <QMenu>
 #include <QAction>
 #include <QSortFilterProxyModel>
+#include <QClipboard>
+#include <QMimeData>
+#include <QUrl>
+#include <QGuiApplication>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -33,6 +37,9 @@ MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> p
     : QMainWindow(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)), m_aiOrchestrator(std::move(aiOrchestrator)) {
     setupUi();
     setupActions();
+
+    m_fileWatcher = new QFileSystemWatcher(this);
+    connect(m_fileWatcher, &QFileSystemWatcher::directoryChanged, this, [this](const QString&) { onRefreshClicked(); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -40,6 +47,89 @@ MainWindow::~MainWindow() = default;
 void MainWindow::setupUi() {
     setWindowTitle(QStringLiteral("ExplorerX"));
     resize(1024, 768);
+
+    // Apply Global Glassmorphism Dark Theme Stylesheet
+    qApp->setStyleSheet(R"(
+        /* Global Background and Text */
+        QWidget {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        /* Glass Panels */
+        QTreeView, QListView, QLineEdit, QStackedWidget > QFrame {
+            background-color: rgba(40, 40, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 2px;
+        }
+
+        /* Scrollbars - Sleek, Thin, Rounded */
+        QScrollBar:vertical {
+            border: none;
+            background: transparent;
+            width: 8px;
+            margin: 0px 0px 0px 0px;
+        }
+        QScrollBar::handle:vertical {
+            background: rgba(255, 255, 255, 0.2);
+            min-height: 20px;
+            border-radius: 4px;
+        }
+        QScrollBar::handle:vertical:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            border: none;
+            background: none;
+        }
+
+        QScrollBar:horizontal {
+            border: none;
+            background: transparent;
+            height: 8px;
+            margin: 0px 0px 0px 0px;
+        }
+        QScrollBar::handle:horizontal {
+            background: rgba(255, 255, 255, 0.2);
+            min-width: 20px;
+            border-radius: 4px;
+        }
+        QScrollBar::handle:horizontal:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
+        QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+            border: none;
+            background: none;
+        }
+
+        /* Tree and Grid Hover States */
+        QTreeView::item:hover, QListView::item:hover {
+            background-color: rgba(0, 120, 215, 0.3);
+            border-radius: 4px;
+        }
+        QTreeView::item:selected, QListView::item:selected {
+            background-color: rgba(0, 120, 215, 0.5);
+            border-radius: 4px;
+        }
+        
+        /* Transparent ToolButton default, glassy hover */
+        QToolButton {
+            background-color: transparent;
+            border: none;
+            padding: 4px;
+            color: #e0e0e0;
+        }
+        QToolButton:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        QToolButton:pressed {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+    )");
 
     // Main widget and layout
     QWidget* centralWidget = new QWidget(this);
@@ -54,19 +144,19 @@ void MainWindow::setupUi() {
     
     // Navigation Buttons
     m_btnBack = new QToolButton(topBar);
-    m_btnBack->setText("<-");
+    m_btnBack->setText(QStringLiteral("⮜"));
     m_btnBack->setEnabled(false);
     
     m_btnForward = new QToolButton(topBar);
-    m_btnForward->setText("->");
+    m_btnForward->setText(QStringLiteral("⮞"));
     m_btnForward->setEnabled(false);
     
     m_btnUp = new QToolButton(topBar);
-    m_btnUp->setText("^");
+    m_btnUp->setText(QStringLiteral("⮝"));
     m_btnUp->setEnabled(false);
     
     m_btnRefresh = new QToolButton(topBar);
-    m_btnRefresh->setText("R");
+    m_btnRefresh->setText(QStringLiteral("⟳"));
     
     topLayout->addWidget(m_btnBack);
     topLayout->addWidget(m_btnForward);
@@ -79,7 +169,6 @@ void MainWindow::setupUi() {
     
     // 1. Breadcrumbs Container
     QFrame* breadcrumbsFrame = new QFrame(m_addressStack);
-    breadcrumbsFrame->setStyleSheet("QFrame { background-color: #FFFFFF; border: 1px solid #CCCCCC; border-radius: 4px; }");
     m_breadcrumbsLayout = new QHBoxLayout(breadcrumbsFrame);
     m_breadcrumbsLayout->setContentsMargins(2, 2, 2, 2);
     m_breadcrumbsLayout->setSpacing(0);
@@ -96,14 +185,12 @@ void MainWindow::setupUi() {
     m_btnEditAddress->setIcon(QApplication::style()->standardIcon(QStyle::SP_DialogOpenButton)); // Or just text
     m_btnEditAddress->setText("Edit");
     m_btnEditAddress->setCursor(Qt::PointingHandCursor);
-    m_btnEditAddress->setStyleSheet("QToolButton { border: none; padding: 2px; } QToolButton:hover { background-color: #E0E0E0; }");
     m_breadcrumbsLayout->addWidget(m_btnEditAddress);
     
     m_addressStack->addWidget(breadcrumbsFrame);
     
     // 2. Line Edit
     m_addressEdit = new QLineEdit(m_addressStack);
-    m_addressEdit->setStyleSheet("QLineEdit { padding: 4px; border: 1px solid #0078D7; border-radius: 4px; }");
     m_addressStack->addWidget(m_addressEdit);
     
     topLayout->addWidget(m_addressStack, 1);
@@ -111,7 +198,7 @@ void MainWindow::setupUi() {
     // AI Command Box (Distinct styling)
     m_aiCommandBox = new QLineEdit(topBar);
     m_aiCommandBox->setPlaceholderText("Ask the AI to do something...");
-    m_aiCommandBox->setStyleSheet("QLineEdit { border: 2px solid #0078D7; border-radius: 4px; padding: 4px; font-weight: bold; }");
+    m_aiCommandBox->setStyleSheet("QLineEdit { border: 2px solid rgba(0, 120, 215, 0.6); border-radius: 8px; padding: 4px; font-weight: bold; background-color: rgba(40, 40, 40, 0.6); color: #e0e0e0; }");
     topLayout->addWidget(m_aiCommandBox, 1); // stretch factor 1
     
     // Search Box
@@ -125,7 +212,7 @@ void MainWindow::setupUi() {
     // Command Bar
     QToolBar* commandBar = new QToolBar(centralWidget);
     commandBar->setMovable(false);
-    commandBar->setStyleSheet("QToolBar { border: none; border-bottom: 1px solid #CCCCCC; padding: 2px; }");
+    commandBar->setStyleSheet("QToolBar { border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 2px; }");
     
     // New Dropdown
     QToolButton* btnNew = new QToolButton(commandBar);
@@ -200,6 +287,25 @@ void MainWindow::setupUi() {
     
     // Wire Search Box Live Typing
     connect(m_searchBox, &QLineEdit::textChanged, m_fileGrid, &FileGridView::setLocalFilter);
+
+    connect(m_fileGrid, &FileGridView::contextMenuRequested, this, [this](const QPoint& pos, const QModelIndex& index) {
+        QMenu menu(this);
+        if (index.isValid()) {
+            menu.addAction(QIcon::fromTheme("edit-cut"), "Cut", this, &MainWindow::onCut);
+            menu.addAction(QIcon::fromTheme("edit-copy"), "Copy", this, &MainWindow::onCopy);
+            menu.addAction(QIcon::fromTheme("edit-paste"), "Paste", this, &MainWindow::onPaste);
+            menu.addSeparator();
+            menu.addAction(QIcon::fromTheme("edit-delete"), "Delete", this, &MainWindow::onDelete);
+            menu.addAction(QIcon::fromTheme("edit-rename"), "Rename", this, &MainWindow::onRename);
+        } else {
+            menu.addAction(QIcon::fromTheme("folder-new"), "New Folder", this, &MainWindow::onNewFolder);
+            menu.addAction(QIcon::fromTheme("document-new"), "New File", this, &MainWindow::onNewFile);
+            menu.addSeparator();
+            menu.addAction(QIcon::fromTheme("edit-paste"), "Paste", this, &MainWindow::onPaste);
+            menu.addAction(QIcon::fromTheme("view-refresh"), "Refresh", this, &MainWindow::onRefreshClicked);
+        }
+        menu.exec(m_fileGrid->viewport()->mapToGlobal(pos));
+    });
 
     // Wire navigation tree clicks to the file grid
     connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
@@ -322,6 +428,10 @@ void MainWindow::navigateTo(const QString& path, bool recordHistory) {
     
     // Update state
     m_currentPath = QDir::toNativeSeparators(path);
+
+    if (!m_fileWatcher->directories().isEmpty()) m_fileWatcher->removePaths(m_fileWatcher->directories());
+    if (!m_currentPath.isEmpty()) m_fileWatcher->addPath(m_currentPath);
+
     m_addressEdit->setText(m_currentPath);
     updateBreadcrumbs();
     
@@ -489,7 +599,7 @@ void MainWindow::updateBreadcrumbs() {
         QToolButton* btn = new QToolButton(m_breadcrumbsContainer);
         btn->setText(part);
         btn->setCursor(Qt::PointingHandCursor);
-        btn->setStyleSheet("QToolButton { border: none; padding: 4px; font-weight: bold; color: #333333; } QToolButton:hover { background-color: #E0E0E0; border-radius: 2px; }");
+        btn->setStyleSheet("font-weight: bold;");
         
         // Add a separator chevron if not the last item
         if (i < parts.size() - 1) {
@@ -559,6 +669,12 @@ void MainWindow::onCopy() {
     if (fileModel) {
         m_clipboardPath = fileModel->filePath(sourceIndex);
         m_clipboardIsCut = false;
+        
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        QMimeData *mimeData = new QMimeData();
+        mimeData->setUrls(QList<QUrl>{QUrl::fromLocalFile(m_clipboardPath)});
+        clipboard->setMimeData(mimeData);
+        
         spdlog::info("Copied: {}", m_clipboardPath.toStdString());
     }
 }
@@ -573,35 +689,60 @@ void MainWindow::onCut() {
     if (fileModel) {
         m_clipboardPath = fileModel->filePath(sourceIndex);
         m_clipboardIsCut = true;
+        
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        QMimeData *mimeData = new QMimeData();
+        mimeData->setUrls(QList<QUrl>{QUrl::fromLocalFile(m_clipboardPath)});
+        clipboard->setMimeData(mimeData);
+        
         spdlog::info("Cut: {}", m_clipboardPath.toStdString());
     }
 }
 
 void MainWindow::onPaste() { 
-    if (m_clipboardPath.isEmpty() || m_currentPath.isEmpty()) return;
+    if (m_currentPath.isEmpty()) return;
     
-    std::filesystem::path srcPath(m_clipboardPath.toStdString());
-    std::filesystem::path destPath = std::filesystem::path(m_currentPath.toStdString()) / srcPath.filename();
+    const QClipboard *clipboard = QGuiApplication::clipboard();
+    const QMimeData *mimeData = clipboard->mimeData();
     
-    spdlog::info("Pasting {} to {}", srcPath.string(), destPath.string());
-    
-    std::thread([this, srcPath, destPath, isCut = m_clipboardIsCut]() {
-        if (isCut) {
-            ExplorerX::Domain::MoveRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string())};
-            m_provider->Move(req);
-        } else {
-            ExplorerX::Domain::CopyRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string()), false};
-            m_provider->Copy(req);
-        }
+    if (mimeData->hasUrls()) {
+        QList<QUrl> urls = mimeData->urls();
+        if (urls.isEmpty()) return;
         
-        QMetaObject::invokeMethod(this, [this, isCut]() {
-            if (isCut) {
-                m_clipboardPath.clear();
-                m_clipboardIsCut = false;
+        std::thread([this, urls, destPathStr = m_currentPath.toStdString()]() {
+            bool anyCut = false;
+            for (const QUrl& url : urls) {
+                if (!url.isLocalFile()) continue;
+                QString srcPathStr = url.toLocalFile();
+                std::filesystem::path srcPath(srcPathStr.toStdString());
+                std::filesystem::path destPath = std::filesystem::path(destPathStr) / srcPath.filename();
+                
+                bool isCut = false;
+                if (srcPathStr == m_clipboardPath) {
+                    isCut = m_clipboardIsCut;
+                    if (isCut) anyCut = true;
+                }
+                
+                spdlog::info("Pasting {} to {}", srcPath.string(), destPath.string());
+                
+                if (isCut) {
+                    ExplorerX::Domain::MoveRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string())};
+                    m_provider->Move(req);
+                } else {
+                    ExplorerX::Domain::CopyRequest req{ExplorerX::Domain::Path(srcPath.string()), ExplorerX::Domain::Path(destPath.string()), false};
+                    m_provider->Copy(req);
+                }
             }
-            onRefreshClicked();
-        });
-    }).detach();
+            
+            QMetaObject::invokeMethod(this, [this, anyCut]() {
+                if (anyCut) {
+                    m_clipboardPath.clear();
+                    m_clipboardIsCut = false;
+                }
+                onRefreshClicked();
+            });
+        }).detach();
+    }
 }
 
 void MainWindow::onDelete() { 

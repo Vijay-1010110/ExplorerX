@@ -23,6 +23,9 @@ public:
     void setSearchResults(std::vector<ExplorerX::Domain::FileItem> results);
     void setLocalFilter(const QString& filterText);
 
+signals:
+    void contextMenuRequested(const QPoint& pos, const QModelIndex& index);
+
 private:
     void setupRealModel();
     
@@ -31,4 +34,11 @@ private:
     std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> m_thumbOrchestrator;
     FileItemModel* m_model = nullptr;
     QSortFilterProxyModel* m_proxyModel = nullptr;
+
+    int m_zoomLevel = 96;
+    void setZoom(int size);
+
+protected:
+    void wheelEvent(QWheelEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 };

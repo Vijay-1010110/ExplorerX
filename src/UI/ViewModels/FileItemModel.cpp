@@ -3,6 +3,9 @@
 #include <spdlog/spdlog.h>
 #include <QApplication>
 #include <QStyle>
+#include <filesystem>
+#include <QMimeData>
+#include <QUrl>
 
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -15,6 +18,7 @@ FileItemModel::~FileItemModel() = default;
 
 void FileItemModel::loadPath(const std::string& path) {
     if (!m_provider) return;
+    m_currentLoadedPath = path;
 
     std::thread([this, provider = m_provider, path]() {
         auto future = provider->Enumerate(ExplorerX::Domain::Path(path));
@@ -135,5 +139,63 @@ Qt::ItemFlags FileItemModel::flags(const QModelIndex &index) const {
     if (!index.isValid()) {
         return Qt::ItemIsDropEnabled;
     }
-    return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+    Qt::ItemFlags defaultFlags = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled;
+    if (isDirectory(index)) {
+        defaultFlags |= Qt::ItemIsDropEnabled;
+    }
+    return defaultFlags;
+}
+
+QStringList FileItemModel::mimeTypes() const {
+    return {"text/uri-list"};
+}
+
+QMimeData* FileItemModel::mimeData(const QModelIndexList &indexes) const {
+    QMimeData *mimeData = new QMimeData();
+    QList<QUrl> urls;
+    for (const QModelIndex &index : indexes) {
+        if (index.isValid() && index.column() == 0) {
+            urls.append(QUrl::fromLocalFile(filePath(index)));
+        }
+    }
+    mimeData->setUrls(urls);
+    return mimeData;
+}
+
+Qt::DropActions FileItemModel::supportedDropActions() const {
+    return Qt::CopyAction | Qt::MoveAction;
+}
+
+bool FileItemModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) {
+    if (!data->hasUrls()) return false;
+
+    std::string targetPath;
+    if (parent.isValid() && isDirectory(parent)) {
+        targetPath = filePath(parent).toStdString();
+    } else {
+        targetPath = m_currentLoadedPath;
+    }
+
+    if (targetPath.empty()) return false;
+
+    QList<QUrl> urls = data->urls();
+    std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider = m_provider;
+    std::thread([provider, urls, targetPath, action]() {
+        for (const QUrl &url : urls) {
+            if (url.isLocalFile()) {
+                std::string srcPath = url.toLocalFile().toStdString();
+                std::filesystem::path srcFsPath(srcPath);
+                std::filesystem::path destFsPath(targetPath);
+                destFsPath /= srcFsPath.filename();
+                
+                if (action == Qt::CopyAction) {
+                    provider->Copy(ExplorerX::Domain::CopyRequest{ExplorerX::Domain::Path(srcPath), ExplorerX::Domain::Path(destFsPath.string()), false});
+                } else if (action == Qt::MoveAction) {
+                    provider->Move(ExplorerX::Domain::MoveRequest{ExplorerX::Domain::Path(srcPath), ExplorerX::Domain::Path(destFsPath.string())});
+                }
+            }
+        }
+    }).detach();
+
+    return true;
 }
