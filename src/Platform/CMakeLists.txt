@@ -5,6 +5,8 @@ add_library(Platform
     WinPathHelper.h
     WinFileSystemWatcher.cpp
     WinFileSystemWatcher.h
+    WinThumbnailProvider.cpp
+    WinThumbnailProvider.h
 )
 
 target_link_libraries(Platform
