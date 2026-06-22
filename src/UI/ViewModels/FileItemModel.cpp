@@ -117,7 +117,10 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
         }
     } else if (role == Qt::DecorationRole && index.column() == 0) {
         if (!HasTrueThumbnail(file)) {
-            return QIcon(GetIconPath(file));
+            QIcon customIcon(GetIconPath(file));
+            if (!customIcon.isNull()) {
+                return customIcon;
+            }
         }
 
         std::string pathStr = file.ItemPath.ToString();
