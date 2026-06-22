@@ -2,6 +2,7 @@ set(CMAKE_AUTORCC ON)
 
 add_executable(ExplorerX
     icons.qrc
+    themes.qrc
     main.cpp
     MainWindow.cpp
     MainWindow.h
