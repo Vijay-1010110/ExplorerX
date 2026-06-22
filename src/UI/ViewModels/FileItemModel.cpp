@@ -96,19 +96,9 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
                         QImage img;
                         img.loadFromData(thumbnail.Data.data(), thumbnail.Data.size());
                         if (!img.isNull()) {
-                            // Scale up to 256x256, preserving aspect ratio and smoothing pixels
-                            QImage scaledImg = img.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                            
-                            // Draw onto a perfect 256x256 square bounding box
-                            QImage squareImg(256, 256, QImage::Format_ARGB32);
-                            squareImg.fill(Qt::transparent);
-                            QPainter painter(&squareImg);
-                            painter.drawImage((256 - scaledImg.width()) / 2, (256 - scaledImg.height()) / 2, scaledImg);
-                            painter.end();
-                            
                             auto* self = const_cast<FileItemModel*>(this);
-                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, squareImg]() {
-                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(squareImg));
+                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, img]() {
+                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(img));
                                 self->m_pendingThumbnails.erase(pathStr);
                                 if (pIndex.isValid()) {
                                     emit self->dataChanged(pIndex, pIndex, {Qt::DecorationRole});
