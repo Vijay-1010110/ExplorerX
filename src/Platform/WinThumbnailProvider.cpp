@@ -92,7 +92,7 @@ std::future<Domain::Expected<Domain::ThumbnailImage>> WinThumbnailProvider::GetT
             if (SUCCEEDED(hr)) {
                 HBITMAP hBitmap = NULL;
                 SIZE sz = { targetSize, targetSize };
-                hr = pImageFactory->GetImage(sz, SIIGBF_RESIZETOFIT, &hBitmap);
+                hr = pImageFactory->GetImage(sz, SIIGBF_RESIZETOFIT | SIIGBF_THUMBNAILONLY, &hBitmap);
                 if (SUCCEEDED(hr)) {
                     IWICBitmap* pWicBitmap = NULL;
                     hr = pFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, &pWicBitmap);
