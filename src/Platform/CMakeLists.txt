@@ -9,6 +9,8 @@ add_library(Platform
     WinThumbnailProvider.h
     LLMClient.cpp
     LLMClient.h
+    WinPlatformHooks.cpp
+    IPlatformHooks.h
 )
 
 target_link_libraries(Platform
