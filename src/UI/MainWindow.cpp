@@ -28,6 +28,11 @@
 #include <QMimeData>
 #include <QUrl>
 #include <QGuiApplication>
+#include "../Core/ThemeManager.h"
+#include "../Platform/IPlatformHooks.h"
+#include <QPainter>
+#include <QPaintEvent>
+#include <QPixmap>
 
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -50,6 +55,8 @@ void MainWindow::setupUi() {
 
     // Apply Global Glassmorphism Dark Theme Stylesheet
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
+    ExplorerX::Platform::IPlatformHooks::EnableWindowBlur((void*)this->winId(), true);
+    qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme("dark"));
 
     // Main widget and layout
     QWidget* centralWidget = new QWidget(this);
@@ -553,6 +560,19 @@ void MainWindow::onTreeRowsInserted(const QModelIndex& parent, int first, int la
             m_navTree->expand(child);
             m_pendingSyncPath.clear();
             break;
+        }
+    }
+}
+
+void MainWindow::paintEvent(QPaintEvent* event) {
+    QMainWindow::paintEvent(event);
+    
+    QString bgPath = ExplorerX::Core::ThemeManager::Instance().GetCustomBackground();
+    if (!bgPath.isEmpty()) {
+        QPixmap bg(bgPath);
+        if (!bg.isNull()) {
+            QPainter painter(this);
+            painter.drawPixmap(rect(), bg.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
         }
     }
 }

@@ -18,5 +18,5 @@ target_include_directories(Core PUBLIC
 find_package(Qt6 COMPONENTS Core REQUIRED)
 set_target_properties(Core PROPERTIES AUTOMOC ON)
 
-target_link_libraries(Core PUBLIC Domain Qt6::Core)
+target_link_libraries(Core PUBLIC Domain Qt6::Core spdlog::spdlog)
 target_compile_features(Core PUBLIC cxx_std_20)

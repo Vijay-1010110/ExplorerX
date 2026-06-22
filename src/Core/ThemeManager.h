@@ -12,8 +12,9 @@ public:
         return instance;
     }
 
-    void LoadTheme(const QString& themeName);
+    QString LoadTheme(const QString& themeName);
     void SetCustomBackground(const QString& imagePath);
+    QString GetCustomBackground() const { return m_customBackground; }
 
 signals:
     void ThemeChanged(const QString& themeName);
@@ -25,6 +26,8 @@ private:
 
     ThemeManager(const ThemeManager&) = delete;
     ThemeManager& operator=(const ThemeManager&) = delete;
+
+    QString m_customBackground;
 };
 
 } // namespace ExplorerX::Core

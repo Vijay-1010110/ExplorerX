@@ -26,6 +26,9 @@ public:
                         QWidget *parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private slots:
     void onCopy();
     void onPaste();
