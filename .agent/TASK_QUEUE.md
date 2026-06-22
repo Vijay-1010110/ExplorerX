@@ -43,7 +43,7 @@ This queue is derived from the Roadmap phases and represents actionable items.
 ### Milestone 10: Implement Real LLM REST API Integration
 - [x] Scaffold AIIntentOrchestrator in Core with dummy logic
 - [x] Implement AI Orchestrator routing logic
-- [ ] Connect AI command bar to Orchestrator
+- [x] Connect AI command bar to Orchestrator
 - [ ] Replace dummy ILLMClient with a real LLM REST API client (libcurl or Qt Network)
 
 ### Future Polish

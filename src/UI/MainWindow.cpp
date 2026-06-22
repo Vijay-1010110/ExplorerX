@@ -45,6 +45,18 @@ MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> p
 
     m_fileWatcher = new QFileSystemWatcher(this);
     connect(m_fileWatcher, &QFileSystemWatcher::directoryChanged, this, [this](const QString&) { onRefreshClicked(); });
+
+    if (m_aiOrchestrator) {
+        connect(m_aiOrchestrator.get(), &ExplorerX::Core::AIIntentOrchestrator::SearchResultsReady,
+                this, [this](const std::vector<ExplorerX::Domain::FileItem>& results) {
+                    QMetaObject::invokeMethod(this, [this, results]() mutable {
+                        if (m_fileGrid) {
+                            m_fileGrid->setLocalFilter("");
+                            m_fileGrid->setSearchResults(std::move(results));
+                        }
+                    });
+                });
+    }
 }
 
 MainWindow::~MainWindow() = default;
