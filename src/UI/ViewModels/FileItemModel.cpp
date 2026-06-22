@@ -16,6 +16,45 @@ FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvi
     : QAbstractTableModel(parent), m_provider(std::move(provider)), m_searchEngine(std::move(searchEngine)), m_thumbOrchestrator(std::move(thumbOrchestrator)) {
 }
 
+namespace {
+    QString GetIconPath(const ExplorerX::Domain::FileItem& file) {
+        if (file.IsDirectory) {
+            return ":/Resources/Icons/folder.svg";
+        }
+        
+        QString name = QString::fromStdString(file.Name);
+        int dotIndex = name.lastIndexOf('.');
+        QString ext = dotIndex != -1 ? name.mid(dotIndex).toLower() : "";
+        if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp" || ext == ".webp" || ext == ".ico") {
+            return ":/Resources/Icons/image.svg";
+        }
+        if (ext == ".mp4" || ext == ".mkv" || ext == ".avi" || ext == ".mov" || ext == ".wmv" || ext == ".webm") {
+            return ":/Resources/Icons/video.svg";
+        }
+        if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aac") {
+            return ":/Resources/Icons/audio.svg";
+        }
+        if (ext == ".zip" || ext == ".rar" || ext == ".7z" || ext == ".tar" || ext == ".gz" || ext == ".iso") {
+            return ":/Resources/Icons/archive.svg";
+        }
+        if (ext == ".cpp" || ext == ".h" || ext == ".c" || ext == ".hpp" || ext == ".js" || ext == ".ts" || ext == ".py" || ext == ".json" || ext == ".xml" || ext == ".html" || ext == ".css" || ext == ".cs" || ext == ".java" || ext == ".php" || ext == ".go" || ext == ".rs" || ext == ".rb" || ext == ".sh") {
+            return ":/Resources/Icons/code.svg";
+        }
+        if (ext == ".txt" || ext == ".md" || ext == ".doc" || ext == ".docx" || ext == ".pdf" || ext == ".xls" || ext == ".xlsx" || ext == ".ppt" || ext == ".pptx" || ext == ".csv") {
+            return ":/Resources/Icons/document.svg";
+        }
+        return ":/Resources/Icons/unknown.svg";
+    }
+
+    bool HasTrueThumbnail(const ExplorerX::Domain::FileItem& file) {
+        if (file.IsDirectory) return false;
+        QString name = QString::fromStdString(file.Name);
+        int dotIndex = name.lastIndexOf('.');
+        QString ext = dotIndex != -1 ? name.mid(dotIndex).toLower() : "";
+        return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".webp" || ext == ".ico";
+    }
+}
+
 FileItemModel::~FileItemModel() = default;
 
 void FileItemModel::loadPath(const std::string& path) {
@@ -77,6 +116,10 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
             default: return {};
         }
     } else if (role == Qt::DecorationRole && index.column() == 0) {
+        if (!HasTrueThumbnail(file)) {
+            return QIcon(GetIconPath(file));
+        }
+
         std::string pathStr = file.ItemPath.ToString();
         
         if (m_iconCache.find(pathStr) != m_iconCache.end()) {

@@ -25,4 +25,5 @@ This queue is derived from the Roadmap phases and represents actionable items.
 
 ### Future Polish
 - [x] Fix Windows default icon fallback in grid view (Scaffolded SVG Resource system)
+- [x] Custom SVG UI implementation
 - Scope search query to current directory
