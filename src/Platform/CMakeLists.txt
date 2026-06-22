@@ -11,9 +11,14 @@ add_library(Platform
     LLMClient.h
     WinPlatformHooks.cpp
     IPlatformHooks.h
+    GeminiLLMClient.cpp
+    GeminiLLMClient.h
 )
 
 target_link_libraries(Platform
     PUBLIC
         Domain
+    PRIVATE
+        Qt6::Network
+        Qt6::Core
 )
