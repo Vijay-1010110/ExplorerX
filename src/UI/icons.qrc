@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/icons">
+        <file>Resources/Icons/folder.png</file>
+        <file>Resources/Icons/document.png</file>
+        <file>Resources/Icons/media.png</file>
         <file>Resources/Icons/folder.svg</file>
         <file>Resources/Icons/document.svg</file>
         <file>Resources/Icons/image.svg</file>
