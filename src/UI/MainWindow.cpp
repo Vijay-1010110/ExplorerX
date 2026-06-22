@@ -60,6 +60,7 @@ void MainWindow::setupUi() {
 
     // Main widget and layout
     QWidget* centralWidget = new QWidget(this);
+    centralWidget->setObjectName("mainCentralWidget");
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);

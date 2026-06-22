@@ -26,5 +26,5 @@ This queue is derived from the Roadmap phases and represents actionable items.
 ### Future Polish
 - [x] Fix Windows default icon fallback in grid view (Scaffolded SVG Resource system)
 - [x] Custom SVG UI implementation
-- [x] Build Core Theme Manager service and QSS architecture
+- [x] Build Core Theme Manager service and QSS architecture *(Pushed to production)*
 - Scope search query to current directory
