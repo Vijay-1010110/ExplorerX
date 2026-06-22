@@ -96,9 +96,26 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
                         QImage img;
                         img.loadFromData(thumbnail.Data.data(), thumbnail.Data.size());
                         if (!img.isNull()) {
+                            int top = img.height(), bottom = -1;
+                            int left = img.width(), right = -1;
+                            for (int y = 0; y < img.height(); ++y) {
+                                for (int x = 0; x < img.width(); ++x) {
+                                    if (qAlpha(img.pixel(x, y)) > 0) {
+                                        top = std::min(top, y);
+                                        bottom = std::max(bottom, y);
+                                        left = std::min(left, x);
+                                        right = std::max(right, x);
+                                    }
+                                }
+                            }
+                            QImage finalImg = img;
+                            if (bottom >= top && right >= left) {
+                                finalImg = img.copy(left, top, right - left + 1, bottom - top + 1);
+                            }
+                            
                             auto* self = const_cast<FileItemModel*>(this);
-                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, img]() {
-                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(img));
+                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, finalImg]() {
+                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(finalImg));
                                 self->m_pendingThumbnails.erase(pathStr);
                                 if (pIndex.isValid()) {
                                     emit self->dataChanged(pIndex, pIndex, {Qt::DecorationRole});
