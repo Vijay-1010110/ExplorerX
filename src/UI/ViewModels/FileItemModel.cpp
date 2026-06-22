@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <QMimeData>
 #include <QUrl>
+#include <QImage>
+#include <QPainter>
 
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
@@ -86,7 +88,7 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
             QPersistentModelIndex pIndex(index);
             
             std::thread([this, pIndex, orchestrator = m_thumbOrchestrator, path = file.ItemPath, pathStr]() {
-                auto future = orchestrator->GetThumbnailAsync(path, 96);
+                auto future = orchestrator->GetThumbnailAsync(path, 256);
                 auto result = future.get();
                 if (result) {
                     auto thumbnail = result.value();
@@ -94,9 +96,19 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
                         QImage img;
                         img.loadFromData(thumbnail.Data.data(), thumbnail.Data.size());
                         if (!img.isNull()) {
+                            // Scale up to 256x256, preserving aspect ratio and smoothing pixels
+                            QImage scaledImg = img.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            
+                            // Draw onto a perfect 256x256 square bounding box
+                            QImage squareImg(256, 256, QImage::Format_ARGB32);
+                            squareImg.fill(Qt::transparent);
+                            QPainter painter(&squareImg);
+                            painter.drawImage((256 - scaledImg.width()) / 2, (256 - scaledImg.height()) / 2, scaledImg);
+                            painter.end();
+                            
                             auto* self = const_cast<FileItemModel*>(this);
-                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, img]() {
-                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(img));
+                            QMetaObject::invokeMethod(self, [self, pIndex, pathStr, squareImg]() {
+                                self->m_iconCache[pathStr] = QIcon(QPixmap::fromImage(squareImg));
                                 self->m_pendingThumbnails.erase(pathStr);
                                 if (pIndex.isValid()) {
                                     emit self->dataChanged(pIndex, pIndex, {Qt::DecorationRole});
