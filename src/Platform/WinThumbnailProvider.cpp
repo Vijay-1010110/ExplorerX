@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <wincodec.h>
+#include <commoncontrols.h>
 
 #pragma comment(lib, "Windowscodecs.lib")
 
@@ -109,17 +110,23 @@ std::future<Domain::Expected<Domain::ThumbnailImage>> WinThumbnailProvider::GetT
 
         if (!rawBytes.has_value()) {
             SHFILEINFOW wInfo = {0};
-            DWORD flags = SHGFI_ICON | SHGFI_LARGEICON;
-            if (SHGetFileInfoW(wPath.c_str(), 0, &wInfo, sizeof(wInfo), flags)) {
-                if (wInfo.hIcon) {
-                    IWICBitmap* pWicBitmap = NULL;
-                    hr = pFactory->CreateBitmapFromHICON(wInfo.hIcon, &pWicBitmap);
-                    if (SUCCEEDED(hr)) {
-                        pWicBitmap->GetSize(&actWidth, &actHeight);
-                        rawBytes = SaveWICBitmapToPNG(pFactory, pWicBitmap);
-                        pWicBitmap->Release();
+            if (SHGetFileInfoW(wPath.c_str(), 0, &wInfo, sizeof(wInfo), SHGFI_SYSICONINDEX)) {
+                IImageList* pImageList = nullptr;
+                HRESULT hrList = SHGetImageList(SHIL_JUMBO, IID_PPV_ARGS(&pImageList));
+                if (SUCCEEDED(hrList) && pImageList) {
+                    HICON hIcon = nullptr;
+                    HRESULT hrIcon = pImageList->GetIcon(wInfo.iIcon, ILD_TRANSPARENT, &hIcon);
+                    if (SUCCEEDED(hrIcon) && hIcon) {
+                        IWICBitmap* pWicBitmap = NULL;
+                        HRESULT hrBmp = pFactory->CreateBitmapFromHICON(hIcon, &pWicBitmap);
+                        if (SUCCEEDED(hrBmp)) {
+                            pWicBitmap->GetSize(&actWidth, &actHeight);
+                            rawBytes = SaveWICBitmapToPNG(pFactory, pWicBitmap);
+                            pWicBitmap->Release();
+                        }
+                        DestroyIcon(hIcon);
                     }
-                    DestroyIcon(wInfo.hIcon);
+                    pImageList->Release();
                 }
             }
         }
