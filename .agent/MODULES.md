@@ -21,3 +21,7 @@
 ## Data Model and Schema Planning
 - **Storage Layers:** user settings DB, file index DB, thumbnail cache DB, recent locations DB, session state DB, plugin registry, action history DB, crash recovery state.
 - **Schema Rules:** Version every schema, support migration scripts, build forward-compatible readers, write migration tests.
+
+## UI Assets and Resources
+- **Qt Resource System:** `icons.qrc` bundling modular SVG assets (Material Design/Fluent UI) under `:/icons/`.
+- **SVG Standardization:** Modern SVGs replace legacy Win32 default icons for standard file types (folder, document, image, etc.).

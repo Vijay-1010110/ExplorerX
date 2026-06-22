@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>Resources/Icons/folder.svg</file>
+        <file>Resources/Icons/document.svg</file>
+        <file>Resources/Icons/image.svg</file>
+        <file>Resources/Icons/video.svg</file>
+        <file>Resources/Icons/audio.svg</file>
+        <file>Resources/Icons/code.svg</file>
+        <file>Resources/Icons/archive.svg</file>
+        <file>Resources/Icons/unknown.svg</file>
+    </qresource>
+</RCC>
