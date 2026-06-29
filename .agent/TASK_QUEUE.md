@@ -37,4 +37,5 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] Build Aesthetic Control Panel (Theme Settings UI)
 - [x] Fix UI Icon scaling and proportion bugs
 - [x] Enable true translucent Glassmorphism background
+- [x] Fix QSS resource loading path bugs
 - [ ] Scope search query to current directory

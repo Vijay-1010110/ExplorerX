@@ -53,7 +53,7 @@ QString ThemeManager::LoadTheme(const QString& themeName) {
     SaveConfig();
     emit ThemeChanged(themeName);
     
-    QFile file(":/Themes/" + themeName + ".qss");
+    QFile file(":/themes/Themes/" + themeName + ".qss");
     if (file.open(QFile::ReadOnly | QFile::Text)) {
         QTextStream stream(&file);
         return stream.readAll();

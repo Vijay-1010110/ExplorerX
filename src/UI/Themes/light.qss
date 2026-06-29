@@ -1,7 +1,11 @@
 /* Global Background and Text */
 QWidget {
-    background-color: #f0f0f0;
+    background-color: transparent;
     color: #121212;
+}
+
+#mainCentralWidget {
+    background-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Glass Panels */
