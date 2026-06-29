@@ -5,6 +5,8 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <uxtheme.h>
+#include <shlobj.h>
+#include <wrl/client.h>
 
 #pragma comment(lib, "dwmapi.lib")
 
@@ -67,6 +69,62 @@ bool IPlatformHooks::HandleNCHitTest(void* msg, qintptr* result, int captionHeig
     }
 #endif
     return false;
+}
+
+void IPlatformHooks::ShowNativeContextMenu(void* hwnd, const std::string& filePath, int x, int y) {
+#ifdef _WIN32
+    if (!hwnd || filePath.empty()) return;
+
+    HWND hWnd = static_cast<HWND>(hwnd);
+
+    // Initialize COM if not already initialized on this thread
+    HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    bool uninitCom = SUCCEEDED(hrInit);
+
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &filePath[0], (int)filePath.size(), NULL, 0);
+    std::wstring wFilePath(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &filePath[0], (int)filePath.size(), &wFilePath[0], size_needed);
+
+    PIDLIST_ABSOLUTE pidl = nullptr;
+    if (SUCCEEDED(SHParseDisplayName(wFilePath.c_str(), nullptr, &pidl, 0, nullptr))) {
+        
+        Microsoft::WRL::ComPtr<IShellFolder> pDesktop;
+        if (SUCCEEDED(SHGetDesktopFolder(&pDesktop))) {
+            
+            PCUITEMID_CHILD pidlChild;
+            Microsoft::WRL::ComPtr<IShellFolder> pParentFolder;
+            if (SUCCEEDED(SHBindToParent(pidl, IID_PPV_ARGS(&pParentFolder), &pidlChild))) {
+                
+                Microsoft::WRL::ComPtr<IContextMenu> pContextMenu;
+                if (SUCCEEDED(pParentFolder->GetUIObjectOf(hWnd, 1, (LPCITEMIDLIST*)&pidlChild, IID_IContextMenu, nullptr, reinterpret_cast<void**>(pContextMenu.GetAddressOf())))) {
+                    
+                    HMENU hMenu = CreatePopupMenu();
+                    if (hMenu) {
+                        if (SUCCEEDED(pContextMenu->QueryContextMenu(hMenu, 0, 1, 0x7FFF, CMF_NORMAL))) {
+                            int command = TrackPopupMenuEx(hMenu, TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON, x, y, hWnd, nullptr);
+                            if (command > 0) {
+                                CMINVOKECOMMANDINFO cmi = {0};
+                                cmi.cbSize = sizeof(cmi);
+                                cmi.fMask = 0;
+                                cmi.hwnd = hWnd;
+                                cmi.lpVerb = MAKEINTRESOURCEA(command - 1);
+                                cmi.nShow = SW_SHOWNORMAL;
+                                
+                                pContextMenu->InvokeCommand(&cmi);
+                            }
+                        }
+                        DestroyMenu(hMenu);
+                    }
+                }
+            }
+        }
+        CoTaskMemFree(pidl);
+    }
+
+    if (uninitCom) {
+        CoUninitialize();
+    }
+#endif
 }
 
 } // namespace ExplorerX::Platform
