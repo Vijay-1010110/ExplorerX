@@ -19,7 +19,7 @@ FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvi
 namespace {
     QString GetIconPath(const ExplorerX::Domain::FileItem& file) {
         if (file.IsDirectory) {
-            return ":/icons/Resources/Icons/folder.png";
+            return ":/icons/Resources/Icons/folder.svg";
         }
         
         QString name = QString::fromStdString(file.Name);
@@ -27,24 +27,24 @@ namespace {
         QString ext = dotIndex != -1 ? name.mid(dotIndex).toLower() : "";
         
         if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp" || ext == ".webp" || ext == ".ico") {
-            return ":/icons/Resources/Icons/media.png";
+            return ":/icons/Resources/Icons/image.svg";
         }
         if (ext == ".mp4" || ext == ".mkv" || ext == ".avi" || ext == ".mov" || ext == ".wmv" || ext == ".webm") {
-            return ":/icons/Resources/Icons/media.png";
+            return ":/icons/Resources/Icons/video.svg";
         }
         if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aac") {
-            return ":/icons/Resources/Icons/media.png";
+            return ":/icons/Resources/Icons/audio.svg";
         }
         if (ext == ".zip" || ext == ".rar" || ext == ".7z" || ext == ".tar" || ext == ".gz" || ext == ".iso") {
-            return ":/icons/Resources/Icons/document.png";
+            return ":/icons/Resources/Icons/archive.svg";
         }
         if (ext == ".cpp" || ext == ".h" || ext == ".c" || ext == ".hpp" || ext == ".js" || ext == ".ts" || ext == ".py" || ext == ".json" || ext == ".xml" || ext == ".html" || ext == ".css" || ext == ".cs" || ext == ".java" || ext == ".php" || ext == ".go" || ext == ".rs" || ext == ".rb" || ext == ".sh") {
-            return ":/icons/Resources/Icons/document.png";
+            return ":/icons/Resources/Icons/code.svg";
         }
         if (ext == ".txt" || ext == ".md" || ext == ".doc" || ext == ".docx" || ext == ".pdf" || ext == ".xls" || ext == ".xlsx" || ext == ".ppt" || ext == ".pptx" || ext == ".csv") {
-            return ":/icons/Resources/Icons/document.png";
+            return ":/icons/Resources/Icons/document.svg";
         }
-        return ":/icons/Resources/Icons/document.png";
+        return ":/icons/Resources/Icons/unknown.svg";
     }
 
     bool HasTrueThumbnail(const ExplorerX::Domain::FileItem& file) {
