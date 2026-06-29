@@ -18,6 +18,8 @@ FileGridView::FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvide
     setGridSize(QSize(m_zoomLevel + 24, m_zoomLevel + 44)); // Give enough space for icon + text
     setWordWrap(true);
     setUniformItemSizes(true);
+    viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
+    viewport()->setAutoFillBackground(false);
     
     // Drag and Drop support
     setDragEnabled(true);

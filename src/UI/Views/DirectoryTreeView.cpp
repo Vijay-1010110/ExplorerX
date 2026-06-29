@@ -4,6 +4,8 @@
 DirectoryTreeView::DirectoryTreeView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider, QWidget *parent)
     : QTreeView(parent), m_provider(std::move(provider)) {
     setUniformRowHeights(true); // UI Virtualization: Optimize row heights
+    viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
+    viewport()->setAutoFillBackground(false);
     
     // Drag and Drop support
     setDragEnabled(true);
