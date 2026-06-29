@@ -112,6 +112,7 @@ void MainWindow::setupUi() {
     // Address Bar Stack
     m_addressStack = new QStackedWidget(topBar);
     m_addressStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_addressStack->setFixedHeight(36);
     
     // 1. Breadcrumbs Container
     QFrame* breadcrumbsFrame = new QFrame(m_addressStack);
@@ -145,12 +146,14 @@ void MainWindow::setupUi() {
     m_aiCommandBox = new QLineEdit(topBar);
     m_aiCommandBox->setPlaceholderText("Ask the AI to do something...");
     m_aiCommandBox->setStyleSheet("QLineEdit { border: 2px solid rgba(0, 120, 215, 0.6); border-radius: 8px; padding: 4px; font-weight: bold; background-color: rgba(40, 40, 40, 0.6); color: #e0e0e0; }");
+    m_aiCommandBox->setFixedHeight(36);
     topLayout->addWidget(m_aiCommandBox, 1); // stretch factor 1
     
     // Search Box
     m_searchBox = new QLineEdit(topBar);
     m_searchBox->setPlaceholderText("Search...");
     m_searchBox->setMaximumWidth(200);
+    m_searchBox->setFixedHeight(36);
     topLayout->addWidget(m_searchBox, 0);
 
     mainLayout->addWidget(topBar);

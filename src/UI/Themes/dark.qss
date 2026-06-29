@@ -171,3 +171,9 @@ QSplitter::handle {
 QSplitter::handle:hover {
     background: rgba(99, 102, 241, 0.4);
 }
+
+QStatusBar {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+}
