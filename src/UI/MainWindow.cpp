@@ -35,6 +35,11 @@
 #include <QPaintEvent>
 #include <QPixmap>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <dwmapi.h>
+#endif
+
 MainWindow::MainWindow(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                        std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
                        std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
@@ -155,6 +160,29 @@ void MainWindow::setupUi() {
     m_searchBox->setMaximumWidth(200);
     m_searchBox->setFixedHeight(36);
     topLayout->addWidget(m_searchBox, 0);
+
+    // Window Controls (Minimize, Maximize, Close)
+    QToolButton* btnMinimize = new QToolButton(topBar);
+    btnMinimize->setText("🗕");
+    btnMinimize->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
+    connect(btnMinimize, &QToolButton::clicked, this, &QMainWindow::showMinimized);
+
+    QToolButton* btnMaximize = new QToolButton(topBar);
+    btnMaximize->setText("🗖");
+    btnMaximize->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
+    connect(btnMaximize, &QToolButton::clicked, this, [this]() {
+        if (this->isMaximized()) this->showNormal();
+        else this->showMaximized();
+    });
+
+    QToolButton* btnClose = new QToolButton(topBar);
+    btnClose->setText("✕");
+    btnClose->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(232, 17, 35, 0.8); color: white; }");
+    connect(btnClose, &QToolButton::clicked, this, &QMainWindow::close);
+
+    topLayout->addWidget(btnMinimize);
+    topLayout->addWidget(btnMaximize);
+    topLayout->addWidget(btnClose);
 
     mainLayout->addWidget(topBar);
 
@@ -824,9 +852,17 @@ void MainWindow::onViewModeChanged(int index) {
 }
 
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result) {
-    // Treat the top 60 pixels (where our Command Bar is) as the draggable title bar
-    if (ExplorerX::Platform::IPlatformHooks::HandleNCHitTest(message, result, 60)) {
-        return true;
+    #ifdef _WIN32
+    MSG* msg = static_cast<MSG*>(message);
+    if (msg->message == 132) { // WM_NCHITTEST
+        POINT pt = { msg->pt.x, msg->pt.y };
+        ScreenToClient(msg->hwnd, &pt);
+        // Treat the top 60 pixels as draggable, EXCEPT for the right-most 120 pixels where our buttons live
+        if (pt.y < 60 && pt.x < this->width() - 120) {
+            *result = 2; // HTCAPTION
+            return true;
+        }
     }
+    #endif
     return QMainWindow::nativeEvent(eventType, message, result);
 }
