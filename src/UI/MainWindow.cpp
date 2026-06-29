@@ -350,8 +350,9 @@ void MainWindow::onAICommandTriggered() {
     m_aiCommandBox->setEnabled(false);
     
     if (m_aiOrchestrator) {
-        std::thread([this, commandStr = command.toStdString()]() {
-            auto future = m_aiOrchestrator->ExecuteNaturalLanguageCommand(commandStr);
+        std::string currentPath = m_currentPath.toStdString();
+        std::thread([this, commandStr = command.toStdString(), currentPath]() {
+            auto future = m_aiOrchestrator->ExecuteNaturalLanguageCommand(commandStr, currentPath);
             auto result = future.get();
             
             QMetaObject::invokeMethod(this, [this, result]() {
