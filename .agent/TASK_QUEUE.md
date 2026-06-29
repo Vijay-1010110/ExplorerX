@@ -36,4 +36,5 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] Implement persistent JSON storage for Theme Engine
 - [x] Build Aesthetic Control Panel (Theme Settings UI)
 - [x] Fix UI Icon scaling and proportion bugs
+- [x] Enable true translucent Glassmorphism background
 - [ ] Scope search query to current directory

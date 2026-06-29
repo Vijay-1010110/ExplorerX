@@ -14,9 +14,9 @@ QWidget {
 #mainCentralWidget {
     background: qlineargradient(
         x1: 0, y1: 0, x2: 1, y2: 1,
-        stop: 0 #0f172a,      /* Deep slate */
-        stop: 0.5 #1e1b4b,    /* Rich indigo/purple */
-        stop: 1 #020617       /* Almost black */
+        stop: 0 rgba(15, 23, 42, 0.5),      /* Deep slate */
+        stop: 0.5 rgba(30, 27, 75, 0.5),    /* Rich indigo/purple */
+        stop: 1 rgba(2, 6, 23, 0.5)         /* Almost black */
     );
 }
 
