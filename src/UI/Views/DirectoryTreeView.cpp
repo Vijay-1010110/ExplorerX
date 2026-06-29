@@ -26,10 +26,13 @@ void DirectoryTreeView::setupRealModel() {
 }
 
 void DirectoryTreeView::scrollContentsBy(int dx, int dy) {
-    // 100% guarantee that Qt does NOT blit the viewport when scrolling, 
-    // even if the QSS engine attempts to force WA_OpaquePaintEvent back to true.
-    viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
-    viewport()->setAutoFillBackground(false);
+    // Block Qt's internal scroll-blitting algorithm completely.
+    // By disabling updates, QWidget::scroll() returns immediately without blitting.
+    viewport()->setUpdatesEnabled(false);
     
     QTreeView::scrollContentsBy(dx, dy);
+    
+    // Re-enable updates and force a clean, full-viewport repaint (FullViewportUpdate equivalent).
+    viewport()->setUpdatesEnabled(true);
+    viewport()->update();
 }
