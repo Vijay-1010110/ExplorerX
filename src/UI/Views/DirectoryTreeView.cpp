@@ -7,6 +7,10 @@ DirectoryTreeView::DirectoryTreeView(std::shared_ptr<ExplorerX::Domain::IFileSys
     viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
     viewport()->setAutoFillBackground(false);
     
+    // Selection configuration
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+    
     // Drag and Drop support
     setDragEnabled(true);
     setAcceptDrops(true);

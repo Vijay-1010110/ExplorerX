@@ -21,6 +21,10 @@ FileGridView::FileGridView(std::shared_ptr<ExplorerX::Domain::IFileSystemProvide
     viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
     viewport()->setAutoFillBackground(false);
     
+    // Selection configuration
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionRectVisible(true);
+    
     // Drag and Drop support
     setDragEnabled(true);
     setAcceptDrops(true);
