@@ -2,7 +2,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <windowsx.h>
 #include <dwmapi.h>
+#include <uxtheme.h>
 
 #pragma comment(lib, "dwmapi.lib")
 
@@ -44,7 +46,27 @@ void IPlatformHooks::EnableWindowBlur(void* hwnd, bool enableDarkMica) {
     // 2. Enable System Backdrop (Mica)
     int backdropType = DWMSBT_MAINWINDOW;
     DwmSetWindowAttribute(hWnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+
+    // 3. Extend frame into client area to maintain drop shadows
+    MARGINS margins = {-1, -1, -1, -1};
+    DwmExtendFrameIntoClientArea(hWnd, &margins);
 #endif
+}
+
+bool IPlatformHooks::HandleNCHitTest(void* msg, qintptr* result, int captionHeight) {
+#ifdef _WIN32
+    MSG* message = static_cast<MSG*>(msg);
+    if (message->message == WM_NCHITTEST) {
+        POINT pt = { GET_X_LPARAM(message->lParam), GET_Y_LPARAM(message->lParam) };
+        ScreenToClient(message->hwnd, &pt);
+        // If the mouse is in the top 'captionHeight' pixels, treat it as the title bar
+        if (pt.y < captionHeight) {
+            *result = HTCAPTION;
+            return true;
+        }
+    }
+#endif
+    return false;
 }
 
 } // namespace ExplorerX::Platform
