@@ -36,6 +36,7 @@
 #include <QPaintEvent>
 #include <QPixmap>
 #include <QWidgetAction>
+#include <QActionGroup>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -246,9 +247,44 @@ void MainWindow::setupUi() {
     btnSort->setText("Sort");
     btnSort->setPopupMode(QToolButton::InstantPopup);
     QMenu* menuSort = new QMenu(btnSort);
-    QAction* actionSortName = menuSort->addAction("Name");
-    QAction* actionSortSize = menuSort->addAction("Size");
-    QAction* actionSortType = menuSort->addAction("Type");
+    QActionGroup* colGroup = new QActionGroup(btnSort);
+    QActionGroup* orderGroup = new QActionGroup(btnSort);
+    auto applySort = [this, colGroup, orderGroup]() {
+        if (!m_fileGrid || !colGroup->checkedAction() || !orderGroup->checkedAction()) return;
+        int col = colGroup->checkedAction()->data().toInt();
+        Qt::SortOrder order = (Qt::SortOrder)orderGroup->checkedAction()->data().toInt();
+        m_fileGrid->setSortMode(col, order);
+    };
+    auto addCol = [&](const QString& text, int col, QMenu* parent) {
+        QAction* act = parent->addAction(text);
+        act->setCheckable(true);
+        act->setData(col);
+        colGroup->addAction(act);
+        connect(act, &QAction::triggered, applySort);
+        return act;
+    };
+    addCol("Name", 0, menuSort)->setChecked(true);
+    addCol("Date modified", 3, menuSort);
+    addCol("Type", 2, menuSort);
+    QMenu* menuMore = menuSort->addMenu("More");
+    addCol("Size", 1, menuMore);
+    addCol("Date created", 4, menuMore);
+    addCol("Authors", 5, menuMore);
+    addCol("Tags", 6, menuMore);
+    addCol("Title", 7, menuMore);
+    menuSort->addSeparator();
+    auto addOrder = [&](const QString& text, Qt::SortOrder order) {
+        QAction* act = menuSort->addAction(text);
+        act->setCheckable(true);
+        act->setData(order);
+        orderGroup->addAction(act);
+        connect(act, &QAction::triggered, applySort);
+        return act;
+    };
+    addOrder("Ascending", Qt::AscendingOrder)->setChecked(true);
+    addOrder("Descending", Qt::DescendingOrder);
+    menuSort->addSeparator();
+    menuSort->addMenu("Group by");
     btnSort->setMenu(menuSort);
     commandBar->addWidget(btnSort);
     
@@ -271,9 +307,7 @@ void MainWindow::setupUi() {
     connect(actionRename, &QAction::triggered, this, &MainWindow::onRename);
     connect(actionShare, &QAction::triggered, this, &MainWindow::onShare);
     connect(actionDelete, &QAction::triggered, this, &MainWindow::onDelete);
-    connect(actionSortName, &QAction::triggered, this, [this]() { onSortChanged(0); });
-    connect(actionSortSize, &QAction::triggered, this, [this]() { onSortChanged(1); });
-    connect(actionSortType, &QAction::triggered, this, [this]() { onSortChanged(2); });
+
     connect(actionViewGrid, &QAction::triggered, this, [this]() { onViewModeChanged(0); });
     connect(actionViewList, &QAction::triggered, this, [this]() { onViewModeChanged(1); });
     

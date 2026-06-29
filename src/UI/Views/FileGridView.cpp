@@ -58,6 +58,10 @@ void FileGridView::setSearchResults(std::vector<ExplorerX::Domain::FileItem> res
     }
 }
 
+void FileGridView::setSortMode(int column, Qt::SortOrder order) {
+    if (m_proxyModel) m_proxyModel->sort(column, order);
+}
+
 void FileGridView::loadPath(const QString& path) {
     if (m_model) {
         m_model->loadPath(path.toStdString());

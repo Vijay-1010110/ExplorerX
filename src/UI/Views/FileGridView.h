@@ -22,6 +22,7 @@ public:
     void loadPath(const QString& path);
     void setSearchResults(std::vector<ExplorerX::Domain::FileItem> results);
     void setLocalFilter(const QString& filterText);
+    void setSortMode(int column, Qt::SortOrder order);
 
 signals:
     void contextMenuRequested(const QPoint& pos, const QModelIndex& index);
