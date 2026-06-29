@@ -16,4 +16,7 @@ private:
     void setupRealModel();
     std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> m_provider;
     DirectoryItemModel* m_model = nullptr;
+
+protected:
+    void scrollContentsBy(int dx, int dy) override;
 };

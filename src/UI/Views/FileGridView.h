@@ -41,4 +41,5 @@ private:
 protected:
     void wheelEvent(QWheelEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void scrollContentsBy(int dx, int dy) override;
 };

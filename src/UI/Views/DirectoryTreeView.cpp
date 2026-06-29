@@ -24,3 +24,12 @@ void DirectoryTreeView::setupRealModel() {
     m_model->loadPath("C:\\"); // Default root
     expandAll();
 }
+
+void DirectoryTreeView::scrollContentsBy(int dx, int dy) {
+    // 100% guarantee that Qt does NOT blit the viewport when scrolling, 
+    // even if the QSS engine attempts to force WA_OpaquePaintEvent back to true.
+    viewport()->setAttribute(Qt::WA_OpaquePaintEvent, false);
+    viewport()->setAutoFillBackground(false);
+    
+    QTreeView::scrollContentsBy(dx, dy);
+}
