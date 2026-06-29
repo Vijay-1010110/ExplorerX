@@ -59,13 +59,19 @@ std::future<Domain::Expected<void>> AIIntentOrchestrator::ExecuteIntent(const Do
     });
 }
 
-std::future<Domain::Expected<void>> AIIntentOrchestrator::ExecuteNaturalLanguageCommand(const std::string& command) {
-    return std::async(std::launch::async, [this, command]() -> Domain::Expected<void> {
+std::future<Domain::Expected<void>> AIIntentOrchestrator::ExecuteNaturalLanguageCommand(const std::string& command, const std::string& currentContextPath) {
+    return std::async(std::launch::async, [this, command, currentContextPath]() -> Domain::Expected<void> {
         auto intentResult = m_llmClient->ParseIntent(command).get();
         if (!intentResult.has_value()) {
             return Domain::MakeUnexpected(intentResult.error());
         }
-        return ExecuteIntent(intentResult.value()).get();
+        
+        auto intent = intentResult.value();
+        if (intent.TargetPaths.empty() && !currentContextPath.empty()) {
+            intent.TargetPaths.push_back(Domain::Path(currentContextPath));
+        }
+        
+        return ExecuteIntent(intent).get();
     });
 }
 

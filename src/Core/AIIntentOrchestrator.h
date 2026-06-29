@@ -19,7 +19,7 @@ public:
                          QObject* parent = nullptr);
 
     // Parses a natural language string and executes the corresponding action asynchronously
-    std::future<Domain::Expected<void>> ExecuteNaturalLanguageCommand(const std::string& command);
+    std::future<Domain::Expected<void>> ExecuteNaturalLanguageCommand(const std::string& command, const std::string& currentContextPath = "");
 
 signals:
     void SearchResultsReady(const std::vector<Domain::FileItem>& results);
