@@ -19,31 +19,32 @@ FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvi
 namespace {
     QString GetIconPath(const ExplorerX::Domain::FileItem& file) {
         if (file.IsDirectory) {
-            return ":/Resources/Icons/folder.svg";
+            return ":/icons/Resources/Icons/folder.png";
         }
         
         QString name = QString::fromStdString(file.Name);
         int dotIndex = name.lastIndexOf('.');
         QString ext = dotIndex != -1 ? name.mid(dotIndex).toLower() : "";
+        
         if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp" || ext == ".webp" || ext == ".ico") {
-            return ":/Resources/Icons/image.svg";
+            return ":/icons/Resources/Icons/media.png";
         }
         if (ext == ".mp4" || ext == ".mkv" || ext == ".avi" || ext == ".mov" || ext == ".wmv" || ext == ".webm") {
-            return ":/Resources/Icons/video.svg";
+            return ":/icons/Resources/Icons/media.png";
         }
         if (ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aac") {
-            return ":/Resources/Icons/audio.svg";
+            return ":/icons/Resources/Icons/media.png";
         }
         if (ext == ".zip" || ext == ".rar" || ext == ".7z" || ext == ".tar" || ext == ".gz" || ext == ".iso") {
-            return ":/Resources/Icons/archive.svg";
+            return ":/icons/Resources/Icons/document.png";
         }
         if (ext == ".cpp" || ext == ".h" || ext == ".c" || ext == ".hpp" || ext == ".js" || ext == ".ts" || ext == ".py" || ext == ".json" || ext == ".xml" || ext == ".html" || ext == ".css" || ext == ".cs" || ext == ".java" || ext == ".php" || ext == ".go" || ext == ".rs" || ext == ".rb" || ext == ".sh") {
-            return ":/Resources/Icons/code.svg";
+            return ":/icons/Resources/Icons/document.png";
         }
         if (ext == ".txt" || ext == ".md" || ext == ".doc" || ext == ".docx" || ext == ".pdf" || ext == ".xls" || ext == ".xlsx" || ext == ".ppt" || ext == ".pptx" || ext == ".csv") {
-            return ":/Resources/Icons/document.svg";
+            return ":/icons/Resources/Icons/document.png";
         }
-        return ":/Resources/Icons/unknown.svg";
+        return ":/icons/Resources/Icons/document.png";
     }
 
     bool HasTrueThumbnail(const ExplorerX::Domain::FileItem& file) {
@@ -142,22 +143,7 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
                         QImage img;
                         img.loadFromData(thumbnail.Data.data(), thumbnail.Data.size());
                         if (!img.isNull()) {
-                            int top = img.height(), bottom = -1;
-                            int left = img.width(), right = -1;
-                            for (int y = 0; y < img.height(); ++y) {
-                                for (int x = 0; x < img.width(); ++x) {
-                                    if (qAlpha(img.pixel(x, y)) > 0) {
-                                        top = std::min(top, y);
-                                        bottom = std::max(bottom, y);
-                                        left = std::min(left, x);
-                                        right = std::max(right, x);
-                                    }
-                                }
-                            }
                             QImage finalImg = img;
-                            if (bottom >= top && right >= left) {
-                                finalImg = img.copy(left, top, right - left + 1, bottom - top + 1);
-                            }
                             
                             auto* self = const_cast<FileItemModel*>(this);
                             QMetaObject::invokeMethod(self, [self, pIndex, pathStr, finalImg]() {

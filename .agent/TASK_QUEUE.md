@@ -35,4 +35,5 @@ This queue is derived from the Roadmap phases and represents actionable items.
 - [x] Build Core Theme Manager service and QSS architecture *(Pushed to production)*
 - [x] Implement persistent JSON storage for Theme Engine
 - [x] Build Aesthetic Control Panel (Theme Settings UI)
+- [x] Fix UI Icon scaling and proportion bugs
 - [ ] Scope search query to current directory
