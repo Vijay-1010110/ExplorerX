@@ -8,7 +8,9 @@
 #include <QUrl>
 #include <QImage>
 #include <QPainter>
-
+#include <QFile>
+#include <QSvgRenderer>
+#include <QHash>
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
                              std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
@@ -118,10 +120,29 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
         }
     } else if (role == Qt::DecorationRole && index.column() == 0) {
         if (!HasTrueThumbnail(file)) {
-            QIcon customIcon(GetIconPath(file));
-            if (!customIcon.isNull()) {
-                return customIcon;
+            QString iconPath = GetIconPath(file);
+            static QHash<QString, QIcon> svgCache;
+            if (!svgCache.contains(iconPath)) {
+                QFile svgFile(iconPath);
+                if (svgFile.open(QIODevice::ReadOnly)) {
+                    QByteArray svgData = svgFile.readAll();
+                    svgFile.close();
+                    
+                    // Recolor currentColor to a light gray/blue (slate-400) for the dark theme
+                    svgData.replace("currentColor", "#94a3b8");
+                    
+                    QImage img(64, 64, QImage::Format_ARGB32);
+                    img.fill(Qt::transparent);
+                    QPainter painter(&img);
+                    painter.setRenderHint(QPainter::Antialiasing);
+                    QSvgRenderer renderer(svgData);
+                    renderer.render(&painter);
+                    painter.end();
+                    
+                    svgCache[iconPath] = QIcon(QPixmap::fromImage(img));
+                }
             }
+            return svgCache.value(iconPath);
         }
 
         std::string pathStr = file.ItemPath.ToString();
