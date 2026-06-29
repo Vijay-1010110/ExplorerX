@@ -13,6 +13,8 @@ add_library(Platform
     IPlatformHooks.h
     GeminiLLMClient.cpp
     GeminiLLMClient.h
+    WindowsRegistryHelper.cpp
+    WindowsRegistryHelper.h
 )
 
 target_link_libraries(Platform
@@ -21,4 +23,6 @@ target_link_libraries(Platform
     PRIVATE
         Qt6::Network
         Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
 )
