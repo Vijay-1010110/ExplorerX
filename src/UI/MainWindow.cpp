@@ -74,7 +74,6 @@ void MainWindow::setupUi() {
 
     // Apply Global Glassmorphism Dark Theme Stylesheet
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
-    setAttribute(Qt::WA_TranslucentBackground);
     ExplorerX::Platform::IPlatformHooks::EnableWindowBlur((void*)this->winId(), true);
     
 #ifdef _WIN32

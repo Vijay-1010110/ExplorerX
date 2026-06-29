@@ -10,6 +10,10 @@ QWidget {
     color: #f8fafc;
 }
 
+QMainWindow {
+    background: transparent;
+}
+
 /* Stunning Main Background Gradient */
 #mainCentralWidget {
     background: qlineargradient(
