@@ -271,3 +271,13 @@ bool FileItemModel::dropMimeData(const QMimeData *data, Qt::DropAction action, i
 
     return true;
 }
+
+Qt::DropActions FileItemModel::supportedDragActions() const {
+    return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
+}
+
+bool FileItemModel::removeRows(int row, int count, const QModelIndex &parent) {
+    // Windows OS handles the physical file move. We return false to prevent Qt from manually 
+    // deleting the model row, avoiding crashes. (A future FileSystemWatcher will refresh the UI).
+    return false;
+}

@@ -37,7 +37,9 @@ public:
     QStringList mimeTypes() const override;
     QMimeData* mimeData(const QModelIndexList &indexes) const override;
     Qt::DropActions supportedDropActions() const override;
+    Qt::DropActions supportedDragActions() const override;
     bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
 private:
     std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> m_provider;

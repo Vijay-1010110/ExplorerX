@@ -1,6 +1,7 @@
 #include "DirectoryItemModel.h"
 #include <thread>
 #include <spdlog/spdlog.h>
+#include <filesystem>
 
 DirectoryItemModel::DirectoryItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider, QObject *parent) 
     : QAbstractItemModel(parent), m_provider(std::move(provider)) {
@@ -178,4 +179,65 @@ Qt::ItemFlags DirectoryItemModel::flags(const QModelIndex &index) const {
         return Qt::ItemIsDropEnabled;
     }
     return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+}
+
+QStringList DirectoryItemModel::mimeTypes() const {
+    return {"text/uri-list"};
+}
+
+QMimeData* DirectoryItemModel::mimeData(const QModelIndexList &indexes) const {
+    QMimeData *mimeData = new QMimeData();
+    QList<QUrl> urls;
+    for (const QModelIndex &index : indexes) {
+        if (index.isValid() && index.column() == 0) {
+            urls.append(QUrl::fromLocalFile(filePath(index)));
+        }
+    }
+    mimeData->setUrls(urls);
+    return mimeData;
+}
+
+Qt::DropActions DirectoryItemModel::supportedDropActions() const {
+    return Qt::CopyAction | Qt::MoveAction;
+}
+
+Qt::DropActions DirectoryItemModel::supportedDragActions() const {
+    return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
+}
+
+bool DirectoryItemModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) {
+    if (!data->hasUrls()) return false;
+
+    std::string targetPath;
+    if (parent.isValid()) {
+        targetPath = filePath(parent).toStdString();
+    } else {
+        if (!m_rootNode) return false;
+        targetPath = m_rootNode->fullPath.toStdString();
+    }
+
+    if (targetPath.empty()) return false;
+
+    QList<QUrl> urls = data->urls();
+    std::thread([urls, targetPath, action]() {
+        for (const QUrl &url : urls) {
+            if (url.isLocalFile()) {
+                std::string srcPath = url.toLocalFile().toStdString();
+                std::filesystem::path srcFsPath(srcPath);
+                std::filesystem::path destFsPath(targetPath);
+                destFsPath /= srcFsPath.filename();
+                
+                std::error_code ec;
+                if (action == Qt::MoveAction) {
+                    std::filesystem::rename(srcFsPath, destFsPath, ec);
+                    if (ec) spdlog::error("Move failed: {}", ec.message());
+                } else {
+                    std::filesystem::copy(srcFsPath, destFsPath, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing, ec);
+                    if (ec) spdlog::error("Copy failed: {}", ec.message());
+                }
+            }
+        }
+    }).detach();
+
+    return true;
 }
