@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QSvgRenderer>
 #include <QHash>
+#include <QDateTime>
 FileItemModel::FileItemModel(std::shared_ptr<ExplorerX::Domain::IFileSystemProvider> provider,
                              std::shared_ptr<ExplorerX::Domain::ISearchEngine> searchEngine,
                              std::shared_ptr<ExplorerX::Core::ThumbnailOrchestrator> thumbOrchestrator,
@@ -103,7 +104,7 @@ int FileItemModel::rowCount(const QModelIndex &parent) const {
 
 int FileItemModel::columnCount(const QModelIndex &parent) const {
     if (parent.isValid()) return 0;
-    return 3;
+    return 8;
 }
 
 QVariant FileItemModel::data(const QModelIndex &index, int role) const {
@@ -116,6 +117,11 @@ QVariant FileItemModel::data(const QModelIndex &index, int role) const {
             case 0: return QString::fromStdString(file.Name);
             case 1: return QString::number(file.Size) + " bytes"; // Formatting can be improved later
             case 2: return file.IsDirectory ? QStringLiteral("Folder") : QStringLiteral("File");
+            case 3: return QDateTime::fromMSecsSinceEpoch(std::chrono::duration_cast<std::chrono::milliseconds>(file.DateModified.time_since_epoch()).count());
+            case 4: return QDateTime::fromMSecsSinceEpoch(std::chrono::duration_cast<std::chrono::milliseconds>(file.DateCreated.time_since_epoch()).count());
+            case 5:
+            case 6:
+            case 7: return QVariant();
             default: return {};
         }
     } else if (role == Qt::DecorationRole && index.column() == 0) {
@@ -203,6 +209,11 @@ QVariant FileItemModel::headerData(int section, Qt::Orientation orientation, int
         case 0: return QStringLiteral("Name");
         case 1: return QStringLiteral("Size");
         case 2: return QStringLiteral("Type");
+        case 3: return QStringLiteral("Date modified");
+        case 4: return QStringLiteral("Date created");
+        case 5: return QStringLiteral("Authors");
+        case 6: return QStringLiteral("Tags");
+        case 7: return QStringLiteral("Title");
         default: return {};
     }
 }
