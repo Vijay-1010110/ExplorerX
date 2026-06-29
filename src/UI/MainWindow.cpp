@@ -65,6 +65,7 @@ MainWindow::~MainWindow() = default;
 void MainWindow::setupUi() {
     setWindowTitle(QStringLiteral("ExplorerX"));
     resize(1024, 768);
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
     // Apply Global Glassmorphism Dark Theme Stylesheet
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
@@ -77,6 +78,7 @@ void MainWindow::setupUi() {
     // Main widget and layout
     QWidget* centralWidget = new QWidget(this);
     centralWidget->setObjectName("mainCentralWidget");
+    centralWidget->setAttribute(Qt::WA_StyledBackground, true);
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
@@ -816,4 +818,12 @@ void MainWindow::onViewModeChanged(int index) {
     if (index >= 0 && index < 2) {
         spdlog::info("View mode changed to: {}", modes[index]);
     }
+}
+
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result) {
+    // Treat the top 60 pixels (where our Command Bar is) as the draggable title bar
+    if (ExplorerX::Platform::IPlatformHooks::HandleNCHitTest(message, result, 60)) {
+        return true;
+    }
+    return QMainWindow::nativeEvent(eventType, message, result);
 }
