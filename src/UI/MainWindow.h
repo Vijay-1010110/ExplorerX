@@ -51,9 +51,10 @@ private slots:
     
     // Command Bar slots
     void onRename();
-    void onShare();
     void onNewFolder();
     void onNewFile();
+    void onNewFileWithExtension(const QString& ext);
+    void onShare();
     void onSortChanged(int index);
     void onViewModeChanged(int index);
 

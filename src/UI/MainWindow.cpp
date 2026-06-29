@@ -32,6 +32,7 @@
 #include <QGuiApplication>
 #include "../Core/ThemeManager.h"
 #include "../Platform/IPlatformHooks.h"
+#include "../Platform/WindowsRegistryHelper.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPixmap>
@@ -225,8 +226,24 @@ void MainWindow::setupUi() {
     btnNew->setText("New");
     btnNew->setPopupMode(QToolButton::InstantPopup);
     QMenu* menuNew = new QMenu(btnNew);
-    QAction* actionNewFolder = menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_DirIcon), "New Folder");
-    QAction* actionNewFile = menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), "New File");
+    connect(menuNew, &QMenu::aboutToShow, this, [this, menuNew]() {
+        menuNew->clear();
+        
+        // Standard OS Folders/Shortcuts
+        menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_DirIcon), "Folder", this, &MainWindow::onNewFolder);
+        menuNew->addAction(QApplication::style()->standardIcon(QStyle::SP_FileLinkIcon), "Shortcut");
+        menuNew->addSeparator();
+        
+        // Dynamic System Templates
+        auto templates = ExplorerX::Platform::WindowsRegistryHelper::GetShellNewTemplates();
+        for (const auto& tmpl : templates) {
+            QAction* act = menuNew->addAction(tmpl.icon, tmpl.friendlyName);
+            connect(act, &QAction::triggered, this, [this, tmpl]() {
+                // Trigger creation of an empty file with tmpl.extension in m_currentPath
+                this->onNewFileWithExtension(tmpl.extension); 
+            });
+        }
+    });
     btnNew->setMenu(menuNew);
     commandBar->addWidget(btnNew);
     
@@ -299,8 +316,6 @@ void MainWindow::setupUi() {
     commandBar->addWidget(btnView);
     
     // Wire Command Bar
-    connect(actionNewFolder, &QAction::triggered, this, &MainWindow::onNewFolder);
-    connect(actionNewFile, &QAction::triggered, this, &MainWindow::onNewFile);
     connect(actionCut, &QAction::triggered, this, &MainWindow::onCut);
     connect(actionCopy, &QAction::triggered, this, &MainWindow::onCopy);
     connect(actionPaste, &QAction::triggered, this, &MainWindow::onPaste);
@@ -888,6 +903,32 @@ void MainWindow::onNewFile() {
                 onRefreshClicked();
             });
         }).detach();
+    }
+}
+
+void MainWindow::onNewFileWithExtension(const QString& ext) {
+    QString extStr = ext;
+    if (!extStr.startsWith(".")) {
+        extStr = "." + extStr;
+    }
+    
+    QString baseName = "New Document";
+    QString newFilePath = QDir(m_currentPath).filePath(baseName + extStr);
+    
+    // Handle duplicates (New Document (1).txt, etc.)
+    int counter = 1;
+    while (QFile::exists(newFilePath)) {
+        newFilePath = QDir(m_currentPath).filePath(baseName + QString(" (%1)").arg(counter) + extStr);
+        counter++;
+    }
+    
+    QFile newFile(newFilePath);
+    if (newFile.open(QIODevice::WriteOnly)) {
+        newFile.close();
+        spdlog::info("Created new file via template: {}", newFilePath.toStdString());
+        onRefreshClicked();
+    } else {
+        spdlog::error("Failed to create new file: {}", newFilePath.toStdString());
     }
 }
 
