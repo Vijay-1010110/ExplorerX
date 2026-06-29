@@ -28,10 +28,16 @@ QMainWindow {
 /* Glass Panels: TreeView, GridView, Address Bar, Menus */
 QTreeView, QListView, QStackedWidget > QFrame, QMenu {
     background-color: rgba(15, 23, 42, 0.4); /* Translucent */
+    background-attachment: fixed; /* Force full repaint on scroll to prevent ghosting */
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-top: 1px solid rgba(255, 255, 255, 0.15); /* Top highlight for 3D effect */
     border-radius: 12px;
     padding: 4px;
+}
+
+/* Explicitly make viewports transparent so Qt disables scroll blitting natively */
+QTreeView::viewport, QListView::viewport {
+    background-color: transparent;
 }
 
 /* Focus and Outline handling */

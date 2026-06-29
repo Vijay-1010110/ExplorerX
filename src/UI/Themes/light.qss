@@ -16,9 +16,15 @@ QMainWindow {
 /* Glass Panels */
 QTreeView, QListView, QLineEdit, QStackedWidget > QFrame {
     background-color: rgba(255, 255, 255, 0.5); /* Crucial: rgba(X, X, X, 0.5) */
+    background-attachment: fixed; /* Force full repaint on scroll to prevent ghosting */
     border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     padding: 2px;
+}
+
+/* Explicitly make viewports transparent so Qt disables scroll blitting natively */
+QTreeView::viewport, QListView::viewport {
+    background-color: transparent;
 }
 
 /* Scrollbars - Sleek, Thin, Rounded */
