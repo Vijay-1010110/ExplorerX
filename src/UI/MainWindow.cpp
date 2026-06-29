@@ -74,12 +74,19 @@ void MainWindow::setupUi() {
 
     // Apply Global Glassmorphism Dark Theme Stylesheet
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
+    setAttribute(Qt::WA_TranslucentBackground);
     ExplorerX::Platform::IPlatformHooks::EnableWindowBlur((void*)this->winId(), true);
     
 #ifdef _WIN32
     // Force rounded corners on Windows 11
     int value = 2; // DWMWCP_ROUND
     DwmSetWindowAttribute((HWND)this->winId(), 33, &value, sizeof(value)); // DWMWA_WINDOW_CORNER_PREFERENCE = 33
+    
+    // Crucial fix: WA_TranslucentBackground adds WS_EX_LAYERED, which blocks Mica. We must strip it!
+    HWND hwnd = (HWND)this->winId();
+    LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    exStyle &= ~WS_EX_LAYERED;
+    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
 #endif
     qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme(
         ExplorerX::Core::ThemeManager::Instance().GetCurrentTheme()
