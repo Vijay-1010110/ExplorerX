@@ -68,7 +68,9 @@ void MainWindow::setupUi() {
     // Apply Global Glassmorphism Dark Theme Stylesheet
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
     ExplorerX::Platform::IPlatformHooks::EnableWindowBlur((void*)this->winId(), true);
-    qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme("dark"));
+    qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme(
+        ExplorerX::Core::ThemeManager::Instance().GetCurrentTheme()
+    ));
 
     // Main widget and layout
     QWidget* centralWidget = new QWidget(this);
