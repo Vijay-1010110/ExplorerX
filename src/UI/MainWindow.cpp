@@ -88,6 +88,41 @@ void MainWindow::setupUi() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
     
+    // Dedicated Title Bar for Window Controls
+    QWidget* titleBar = new QWidget(centralWidget);
+    titleBar->setFixedHeight(32);
+    QHBoxLayout* titleLayout = new QHBoxLayout(titleBar);
+    titleLayout->setContentsMargins(0, 0, 0, 0);
+    titleLayout->setSpacing(0);
+    titleLayout->addStretch(1); // Pushes buttons to the right
+    
+    QToolButton* btnMinimize = new QToolButton(titleBar);
+    btnMinimize->setText("🗕");
+    btnMinimize->setFixedSize(46, 32);
+    btnMinimize->setStyleSheet("QToolButton { border: none; background: transparent; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
+    connect(btnMinimize, &QToolButton::clicked, this, &QMainWindow::showMinimized);
+    
+    QToolButton* btnMaximize = new QToolButton(titleBar);
+    btnMaximize->setText("🗖");
+    btnMaximize->setFixedSize(46, 32);
+    btnMaximize->setStyleSheet("QToolButton { border: none; background: transparent; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
+    connect(btnMaximize, &QToolButton::clicked, this, [this]() {
+        if (this->isMaximized()) this->showNormal();
+        else this->showMaximized();
+    });
+    
+    QToolButton* btnClose = new QToolButton(titleBar);
+    btnClose->setText("✕");
+    btnClose->setFixedSize(46, 32);
+    btnClose->setStyleSheet("QToolButton { border: none; background: transparent; font-size: 11pt; } QToolButton:hover { background-color: rgba(232, 17, 35, 0.8); color: white; }");
+    connect(btnClose, &QToolButton::clicked, this, &QMainWindow::close);
+    
+    titleLayout->addWidget(btnMinimize);
+    titleLayout->addWidget(btnMaximize);
+    titleLayout->addWidget(btnClose);
+    
+    mainLayout->addWidget(titleBar);
+
     // Top bar containing AI command bar and search box
     QWidget* topBar = new QWidget(centralWidget);
     QHBoxLayout* topLayout = new QHBoxLayout(topBar);
@@ -160,29 +195,6 @@ void MainWindow::setupUi() {
     m_searchBox->setMaximumWidth(200);
     m_searchBox->setFixedHeight(36);
     topLayout->addWidget(m_searchBox, 0);
-
-    // Window Controls (Minimize, Maximize, Close)
-    QToolButton* btnMinimize = new QToolButton(topBar);
-    btnMinimize->setText("🗕");
-    btnMinimize->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
-    connect(btnMinimize, &QToolButton::clicked, this, &QMainWindow::showMinimized);
-
-    QToolButton* btnMaximize = new QToolButton(topBar);
-    btnMaximize->setText("🗖");
-    btnMaximize->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(255, 255, 255, 0.1); }");
-    connect(btnMaximize, &QToolButton::clicked, this, [this]() {
-        if (this->isMaximized()) this->showNormal();
-        else this->showMaximized();
-    });
-
-    QToolButton* btnClose = new QToolButton(topBar);
-    btnClose->setText("✕");
-    btnClose->setStyleSheet("QToolButton { border: none; background: transparent; padding: 6px; font-size: 11pt; } QToolButton:hover { background-color: rgba(232, 17, 35, 0.8); color: white; }");
-    connect(btnClose, &QToolButton::clicked, this, &QMainWindow::close);
-
-    topLayout->addWidget(btnMinimize);
-    topLayout->addWidget(btnMaximize);
-    topLayout->addWidget(btnClose);
 
     mainLayout->addWidget(topBar);
 
@@ -857,8 +869,8 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr
     if (msg->message == 132) { // WM_NCHITTEST
         POINT pt = { msg->pt.x, msg->pt.y };
         ScreenToClient(msg->hwnd, &pt);
-        // Treat the top 60 pixels as draggable, EXCEPT for the right-most 120 pixels where our buttons live
-        if (pt.y < 60 && pt.x < this->width() - 120) {
+        // Treat the top 32 pixels as draggable, EXCEPT for the right-most 138 pixels where our buttons live
+        if (pt.y < 32 && pt.x < this->width() - 138) {
             *result = 2; // HTCAPTION
             return true;
         }
