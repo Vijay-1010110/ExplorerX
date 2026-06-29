@@ -661,13 +661,20 @@ void MainWindow::onTreeRowsInserted(const QModelIndex& parent, int first, int la
 }
 
 void MainWindow::paintEvent(QPaintEvent* event) {
+    // Forcefully erase the backing store buffer to fully transparent
+    // This eliminates ALL ghosting caused by scrolling translucent widgets over the Mica backdrop!
+    QPainter painter(this);
+    painter.setCompositionMode(QPainter::CompositionMode_Clear);
+    painter.fillRect(event->rect(), Qt::transparent);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    
+    // Now let the rest of the widgets paint normally on the clean slate
     QMainWindow::paintEvent(event);
     
     QString bgPath = ExplorerX::Core::ThemeManager::Instance().GetCustomBackground();
     if (!bgPath.isEmpty()) {
         QPixmap bg(bgPath);
         if (!bg.isNull()) {
-            QPainter painter(this);
             painter.drawPixmap(rect(), bg.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
         }
     }
