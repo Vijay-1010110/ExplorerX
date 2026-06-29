@@ -23,6 +23,7 @@
 #include <QStyle>
 #include <QToolBar>
 #include <QMenu>
+#include <QTimer>
 #include <QAction>
 #include <QSortFilterProxyModel>
 #include <QClipboard>
@@ -81,12 +82,16 @@ void MainWindow::setupUi() {
     // Force rounded corners on Windows 11
     int value = 2; // DWMWCP_ROUND
     DwmSetWindowAttribute((HWND)this->winId(), 33, &value, sizeof(value)); // DWMWA_WINDOW_CORNER_PREFERENCE = 33
-    
     // Crucial fix: WA_TranslucentBackground adds WS_EX_LAYERED, which blocks Mica. We must strip it!
+    // We use a QTimer to ensure this happens AFTER the window is fully shown and Qt has applied its styles.
     HWND hwnd = (HWND)this->winId();
-    LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-    exStyle &= ~WS_EX_LAYERED;
-    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
+    QTimer::singleShot(50, this, [hwnd]() {
+        LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        if (exStyle & WS_EX_LAYERED) {
+            exStyle &= ~WS_EX_LAYERED;
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
+        }
+    });
 #endif
     qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme(
         ExplorerX::Core::ThemeManager::Instance().GetCurrentTheme()
