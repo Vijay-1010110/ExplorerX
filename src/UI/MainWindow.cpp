@@ -338,9 +338,11 @@ void MainWindow::setupUi() {
 
     mainLayout->addWidget(mainSplitter, 1);
     
-    // Status Bar label for AI Feedback
-    m_aiStatusLabel = new QLabel(this);
-    statusBar()->addWidget(m_aiStatusLabel);
+    // AI Feedback Label (Moved inside central widget to inherit glass gradient)
+    m_aiStatusLabel = new QLabel(centralWidget);
+    m_aiStatusLabel->setStyleSheet("QLabel { padding: 4px 8px; font-weight: bold; color: rgba(255, 255, 255, 0.6); }");
+    m_aiStatusLabel->setText("Ready");
+    mainLayout->addWidget(m_aiStatusLabel);
     
     setCentralWidget(centralWidget);
 }
