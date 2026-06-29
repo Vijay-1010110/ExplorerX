@@ -8,6 +8,7 @@
 #include <QStatusBar>
 #include "Views/DirectoryTreeView.h"
 #include "Views/FileGridView.h"
+#include "Views/ThemeSettingsDialog.h"
 #include "ViewModels/DirectoryItemModel.h"
 #include "ViewModels/FileItemModel.h"
 #include <QKeySequence>
@@ -213,6 +214,22 @@ void MainWindow::setupUi() {
     connect(actionSortType, &QAction::triggered, this, [this]() { onSortChanged(2); });
     connect(actionViewGrid, &QAction::triggered, this, [this]() { onViewModeChanged(0); });
     connect(actionViewList, &QAction::triggered, this, [this]() { onViewModeChanged(1); });
+    
+    QWidget* spacer = new QWidget(commandBar);
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    commandBar->addWidget(spacer);
+
+    QToolButton* btnSettings = new QToolButton(commandBar);
+    btnSettings->setText("⚙️ Settings");
+    connect(btnSettings, &QToolButton::clicked, this, [this]() {
+        ExplorerX::UI::Views::ThemeSettingsDialog dialog(this);
+        dialog.exec();
+    });
+    commandBar->addWidget(btnSettings);
+
+    connect(&ExplorerX::Core::ThemeManager::Instance(), &ExplorerX::Core::ThemeManager::BackgroundChanged, this, [this](const QString&) {
+        this->update();
+    });
     
     mainLayout->addWidget(commandBar);
 

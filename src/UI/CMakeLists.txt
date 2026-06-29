@@ -14,6 +14,8 @@ add_executable(ExplorerX
     ViewModels/FileItemModel.cpp
     ViewModels/DirectoryItemModel.h
     ViewModels/DirectoryItemModel.cpp
+    Views/ThemeSettingsDialog.h
+    Views/ThemeSettingsDialog.cpp
 )
 
 target_link_libraries(ExplorerX
