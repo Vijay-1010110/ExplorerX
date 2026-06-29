@@ -18,6 +18,7 @@ QWidget {
         stop: 0.5 rgba(30, 27, 75, 0.5),    /* Rich indigo/purple */
         stop: 1 rgba(2, 6, 23, 0.5)         /* Almost black */
     );
+    border-radius: 8px;
 }
 
 /* Glass Panels: TreeView, GridView, Address Bar, Menus */

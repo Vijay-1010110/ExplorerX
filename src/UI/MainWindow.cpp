@@ -76,6 +76,12 @@ void MainWindow::setupUi() {
     // QSS is now managed by the Core ThemeManager and loaded from themes.qrc
     setAttribute(Qt::WA_TranslucentBackground);
     ExplorerX::Platform::IPlatformHooks::EnableWindowBlur((void*)this->winId(), true);
+    
+#ifdef _WIN32
+    // Force rounded corners on Windows 11
+    int value = 2; // DWMWCP_ROUND
+    DwmSetWindowAttribute((HWND)this->winId(), 33, &value, sizeof(value)); // DWMWA_WINDOW_CORNER_PREFERENCE = 33
+#endif
     qApp->setStyleSheet(ExplorerX::Core::ThemeManager::Instance().LoadTheme(
         ExplorerX::Core::ThemeManager::Instance().GetCurrentTheme()
     ));
