@@ -35,6 +35,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPixmap>
+#include <QWidgetAction>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -308,24 +309,7 @@ void MainWindow::setupUi() {
     // Wire Search Box Live Typing
     connect(m_searchBox, &QLineEdit::textChanged, m_fileGrid, &FileGridView::setLocalFilter);
 
-    connect(m_fileGrid, &FileGridView::contextMenuRequested, this, [this](const QPoint& pos, const QModelIndex& index) {
-        QMenu menu(this);
-        if (index.isValid()) {
-            menu.addAction(QIcon::fromTheme("edit-cut"), "Cut", this, &MainWindow::onCut);
-            menu.addAction(QIcon::fromTheme("edit-copy"), "Copy", this, &MainWindow::onCopy);
-            menu.addAction(QIcon::fromTheme("edit-paste"), "Paste", this, &MainWindow::onPaste);
-            menu.addSeparator();
-            menu.addAction(QIcon::fromTheme("edit-delete"), "Delete", this, &MainWindow::onDelete);
-            menu.addAction(QIcon::fromTheme("edit-rename"), "Rename", this, &MainWindow::onRename);
-        } else {
-            menu.addAction(QIcon::fromTheme("folder-new"), "New Folder", this, &MainWindow::onNewFolder);
-            menu.addAction(QIcon::fromTheme("document-new"), "New File", this, &MainWindow::onNewFile);
-            menu.addSeparator();
-            menu.addAction(QIcon::fromTheme("edit-paste"), "Paste", this, &MainWindow::onPaste);
-            menu.addAction(QIcon::fromTheme("view-refresh"), "Refresh", this, &MainWindow::onRefreshClicked);
-        }
-        menu.exec(m_fileGrid->viewport()->mapToGlobal(pos));
-    });
+    connect(m_fileGrid, &FileGridView::contextMenuRequested, this, &MainWindow::showContextMenu);
 
     // Wire navigation tree clicks to the file grid
     connect(m_navTree, &DirectoryTreeView::clicked, this, &MainWindow::onDirectorySelected);
@@ -901,4 +885,78 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr
     }
     #endif
     return QMainWindow::nativeEvent(eventType, message, result);
+}
+
+void MainWindow::showContextMenu(const QPoint& pos, const QModelIndex& index) {
+    QMenu menu(this);
+    
+    // The Modern Top Row
+    QWidgetAction* topRowAction = new QWidgetAction(&menu);
+    QWidget* topRowWidget = new QWidget(&menu);
+    QHBoxLayout* topRowLayout = new QHBoxLayout(topRowWidget);
+    topRowLayout->setContentsMargins(8, 4, 8, 4);
+    topRowLayout->setSpacing(12);
+    
+    QToolButton* btnCut = new QToolButton(topRowWidget);
+    btnCut->setIcon(QIcon::fromTheme("edit-cut"));
+    btnCut->setToolTip("Cut");
+    connect(btnCut, &QToolButton::clicked, this, [this, &menu]() { onCut(); menu.close(); });
+    
+    QToolButton* btnCopy = new QToolButton(topRowWidget);
+    btnCopy->setIcon(QIcon::fromTheme("edit-copy"));
+    btnCopy->setToolTip("Copy");
+    connect(btnCopy, &QToolButton::clicked, this, [this, &menu]() { onCopy(); menu.close(); });
+    
+    QToolButton* btnRename = new QToolButton(topRowWidget);
+    btnRename->setIcon(QIcon::fromTheme("edit-rename"));
+    btnRename->setToolTip("Rename");
+    connect(btnRename, &QToolButton::clicked, this, [this, &menu]() { onRename(); menu.close(); });
+    
+    QToolButton* btnDelete = new QToolButton(topRowWidget);
+    btnDelete->setIcon(QIcon::fromTheme("edit-delete"));
+    btnDelete->setToolTip("Delete");
+    connect(btnDelete, &QToolButton::clicked, this, [this, &menu]() { onDelete(); menu.close(); });
+    
+    topRowLayout->addStretch();
+    topRowLayout->addWidget(btnCut);
+    topRowLayout->addWidget(btnCopy);
+    topRowLayout->addWidget(btnRename);
+    topRowLayout->addWidget(btnDelete);
+    topRowLayout->addStretch();
+    
+    topRowAction->setDefaultWidget(topRowWidget);
+    menu.addAction(topRowAction);
+    
+    menu.addSeparator();
+    
+    QString path = m_currentPath;
+    if (index.isValid()) {
+        auto* proxyModel = qobject_cast<QSortFilterProxyModel*>(m_fileGrid->model());
+        if (proxyModel) {
+            QModelIndex sourceIndex = proxyModel->mapToSource(index);
+            auto* fileModel = qobject_cast<FileItemModel*>(proxyModel->sourceModel());
+            if (fileModel) {
+                path = fileModel->filePath(sourceIndex);
+            }
+        }
+        menu.addAction(QIcon::fromTheme("document-open"), "Open", this, [this, index]() {
+            onFileGridDoubleClicked(index);
+        });
+    } else {
+        menu.addAction(QIcon::fromTheme("folder-new"), "New Folder", this, &MainWindow::onNewFolder);
+        menu.addAction(QIcon::fromTheme("document-new"), "New File", this, &MainWindow::onNewFile);
+        menu.addAction(QIcon::fromTheme("edit-paste"), "Paste", this, &MainWindow::onPaste);
+        menu.addAction(QIcon::fromTheme("view-refresh"), "Refresh", this, &MainWindow::onRefreshClicked);
+    }
+    
+    menu.addSeparator();
+    QAction* moreOptionsAction = menu.addAction("Show more options");
+    
+    QPoint globalPos = m_fileGrid->viewport()->mapToGlobal(pos);
+    
+    connect(moreOptionsAction, &QAction::triggered, this, [this, path, globalPos]() {
+        ExplorerX::Platform::IPlatformHooks::ShowNativeContextMenu((void*)this->winId(), path.toStdString(), globalPos.x(), globalPos.y());
+    });
+    
+    menu.exec(globalPos);
 }

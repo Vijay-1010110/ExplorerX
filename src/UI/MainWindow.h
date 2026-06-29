@@ -40,6 +40,7 @@ private slots:
     void onAICommandTriggered();
     void onFileGridDoubleClicked(const QModelIndex& index);
     void onTreeRowsInserted(const QModelIndex& parent, int first, int last);
+    void showContextMenu(const QPoint& pos, const QModelIndex& index);
     
     // Navigation slots
     void onBackClicked();
